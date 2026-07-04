@@ -1020,7 +1020,6 @@ void ABCVm::publicHandleEvent(EventDispatcher* dispatcher, _R<Event> event)
 		}
 	}
 
-	bool stagehandled=false;
 	//Do bubbling phase
 	if(event->bubbles && !parents.empty())
 	{
@@ -1028,8 +1027,6 @@ void ABCVm::publicHandleEvent(EventDispatcher* dispatcher, _R<Event> event)
 		auto i = parents.begin();
 		for(;i!=parents.end();++i)
 		{
-			if ((*i)->is<Stage>())
-				stagehandled=true;
 			if (event->immediatePropagationStopped || event->propagationStopped)
 				break;
 			(*i)->incRef();

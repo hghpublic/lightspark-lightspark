@@ -23,7 +23,7 @@
 #include "compat.h"
 #include "asobject.h"
 #include "scripting/flash/display/flashdisplay.h"
-#include "backends/graphics.h"
+#include "backends/textdata.h"
 
 namespace lightspark
 {

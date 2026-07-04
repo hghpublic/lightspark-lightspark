@@ -35,6 +35,7 @@
 namespace lightspark
 {
 class Bitmap;
+class CachedSurface;
 struct RenderDisplayObjectToBitmapContainer
 {
 	MATRIX initialMatrix;

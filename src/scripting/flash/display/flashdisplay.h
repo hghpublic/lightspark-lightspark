@@ -28,7 +28,6 @@
 #include "swftypes.h"
 #include "scripting/flash/events/flashevents.h"
 #include "backends/netutils.h"
-#include "backends/graphics.h"
 #include "scripting/flash/display/DisplayObject.h"
 #include "scripting/flash/display/Graphics.h"
 #include "scripting/flash/display/TokenContainer.h"

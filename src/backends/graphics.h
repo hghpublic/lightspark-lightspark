@@ -22,10 +22,7 @@
 
 #define CHUNKSIZE_REAL 126 // 1 pixel on each side is used for clamping to edge
 #define CHUNKSIZE 128
-#define TWIPS_FACTOR 20.0
 
-
-#include "forwards/backends/cachedsurface.h"
 #include "interfaces/backends/graphics.h"
 #include "interfaces/threading.h"
 #include "compat.h"
@@ -45,63 +42,6 @@ class SurfaceState;
 class DisplayObject;
 class ColorTransformBase;
 	
-struct RectF
-{
-	Vector2f min;
-	Vector2f max;
-	Vector2f tl() const { return min; }
-	Vector2f tr() const { return Vector2f(max.x, min.y); }
-	Vector2f bl() const { return Vector2f(min.x, max.y); }
-	Vector2f br() const { return max; }
-	Vector2f size() const { return max - min; }
-	RectF _union(const RectF& r) const
-	{
-		return RectF {
-			Vector2f(
-				dmin(min.x, r.min.x),
-				dmin(min.y, r.min.y)
-			),
-			Vector2f(
-				dmax(max.x, r.max.x),
-				dmax(max.y, r.max.y)
-			)
-
-		};
-	}
-	bool intersects(const RectF& r) const
-	{
-		return
-		(
-			min.x <= r.max.x &&
-			max.x >= r.min.x &&
-			min.y <= r.max.y &&
-			max.y >= r.min.y
-		);
-	}
-	RectF operator*(const MATRIX& r) const
-	{
-		auto p0 = r.multiply2D(tl());
-		auto p1 = r.multiply2D(bl());
-		auto p2 = r.multiply2D(tr());
-		auto p3 = r.multiply2D(br());
-		return RectF {
-			Vector2f(
-				dmin(dmin(p0.x, p1.x), dmin(p2.x, p3.x)),
-				dmin(dmin(p0.y, p1.y), dmin(p2.y, p3.y))
-			),
-			Vector2f(
-				dmax(dmax(p0.x, p1.x), dmax(p2.x, p3.x)),
-				dmax(dmax(p0.y, p1.y), dmax(p2.y, p3.y))
-			)
-		};
-	}
-	RectF& operator*=(const MATRIX& r) { return *this = *this * r; }
-	template<typename T>
-	RectF operator/(const T& value) { return RectF { min / value, max / value }; }
-	template<typename T>
-	RectF& operator/=(const T& value) { return *this = *this / value; }
-};
-
 class TextureChunk
 {
 friend class GLRenderContext;
@@ -299,152 +239,6 @@ public:
 	static void fillFromMATRIX(cairo_matrix_t* m, const MATRIX& mat);
 };
 #endif
-enum ALIGNMENT {AS_NONE = 0, AS_LEFT, AS_RIGHT, AS_CENTER };
-
-struct FormatText
-{
-	bool bullet {false};
-	bool bold {false};
-	bool italic {false};
-	bool underline {false};
-	bool paragraph {false};
-	ALIGNMENT align {AS_NONE};
-	RGBA fontColor {0x000000,0}; // use alpha 0 as "not set" indicator
-	uint32_t fontSize {0};
-	uint32_t font {BUILTIN_STRINGS::EMPTY};
-	uint32_t embeddedfontID {UINT32_MAX};
-	tiny_string url;
-	tiny_string target;
-	number_t kerning {0};
-	number_t letterspacing {0};
-	tiny_string blockindent;
-	tiny_string indent;
-	tiny_string leading;
-	tiny_string leftmargin;
-	tiny_string rightmargin;
-	tiny_string tabstops;
-	uint32_t level {0};
-	bool paramsChanged(const FormatText* f) const;
-	FormatText() {}
-	FormatText(const TextData& tdata);
-};
-
-struct textline
-{
-	tiny_string text;
-	number_t autosizeposition {0};
-	uint32_t textwidth {0};
-	uint32_t height {0};
-	FormatText format;
-	bool needsnewline {false};
-	uint32_t linebreaks {0};
-};
-
-class FontTag;
-class DLL_PUBLIC TextData
-{
-friend class CachedSurface;
-protected:
-	std::vector<textline> textlines;
-public:
-	/* the default values are from the spec for flash.text.TextField and flash.text.TextFormat */
-	TextData()
-	:swfversion(0)
-	,width(100*TWIPS_FACTOR)
-	,height(100*TWIPS_FACTOR)
-	,leftMargin(0)
-	,rightMargin(0)
-	,indent(0)
-	,leading(0)
-	,textWidth(0)
-	,textHeight(0)
-	,fontname(BUILTIN_STRINGS::STRING_TIMES_NEW_ROMAN)
-	,fontID(UINT32_MAX)
-	,scrollH(0)
-	,scrollV(1)
-	,backgroundColor(0xFFFFFF)
-	,borderColor(0x000000)
-	,background(false)
-	,border(false)
-	,multiline(false)
-	,isBold(false)
-	,isItalic(false)
-	,wordWrap(false)
-	,caretblinkstate(false)
-	,isPassword(false)
-	,useOutlines(false)
-	,autoSize(AS_NONE)
-	,align(AS_NONE)
-	,fontSize(12)
-	,embeddedFont(nullptr)
-	,nanoVGFontID(-2) // -2 means no check for system font executed
-	{}
-
-	uint32_t swfversion;
-	uint32_t width;
-	uint32_t height;
-	uint32_t leftMargin;
-	uint32_t rightMargin;
-	uint32_t indent;
-	int32_t leading;
-	uint32_t textWidth;
-	uint32_t textHeight;
-	uint32_t fontname;
-	uint32_t fontID;
-	int32_t scrollH; // pixels, 0-based
-	int32_t scrollV; // lines, 1-based
-	RGB backgroundColor;
-	RGB borderColor;
-	bool background:1;
-	bool border:1;
-	bool multiline:1;
-	bool isBold:1;
-	bool isItalic:1;
-	bool wordWrap:1;
-	bool caretblinkstate:1;
-	bool isPassword:1;
-	bool useOutlines;
-	RGB textColor;
-	ALIGNMENT autoSize;
-	ALIGNMENT align;
-	uint32_t fontSize;
-	FontTag* embeddedFont;
-	int nanoVGFontID;
-	tiny_string getText(uint32_t line=UINT32_MAX) const;
-	void setText(const char* text, bool firstlineonly=false, FormatText* format=nullptr);
-	void appendText(const char* text, bool firstlineonly=false, const FormatText* format = nullptr, uint32_t swfversion=UINT32_MAX, bool condensewhite=false);
-	void appendFormatText(const char* text, const FormatText& format, uint32_t swfversion, bool condensewhite);
-	void appendLineBreak(bool needsadditionalbreak, bool emptyline, FormatText format);
-	void clear();
-	bool isWhitespaceOnly(bool multiline) const;
-	void getTextSizes(SystemState* sys, const FormatText& format, FontTag* ef, const tiny_string& text, number_t& tw, number_t& th);
-	bool TextIsEqual(const std::vector<tiny_string>& lines, const std::vector<FormatText>& oldformats) const;
-	uint32_t getLineCount() const { return textlines.size(); }
-	FontTag* checkEmbeddedFont(DisplayObject* d);
-	void checklastline(bool needsadditionalline);
-};
-
-class LineData {
-public:
-	LineData(int32_t x, int32_t y, int32_t _width,
-		 int32_t _height, int32_t _firstCharOffset, int32_t _length,
-		 number_t _ascent, number_t _descent, number_t _leading,
-		 number_t _indent):
-		extents(x, x+_width, y, y+_height), 
-		firstCharOffset(_firstCharOffset), length(_length),
-		ascent(_ascent), descent(_descent), leading(_leading),
-		indent(_indent) {}
-	// position and size
-	RECT extents;
-	// Offset of the first character on this line
-	int32_t firstCharOffset;
-	// length of the line in characters
-	int32_t length;
-	number_t ascent;
-	number_t descent;
-	number_t leading;
-	number_t indent;
-};
 
 class RefreshableDrawable: public IDrawable
 {
@@ -469,21 +263,6 @@ public:
 	//Invalidation queue management
 	virtual void addToInvalidateQueue(DisplayObject* d) = 0;
 	_NR<DisplayObject> getCacheAsBitmapObject() const;
-};
-
-class CharacterRenderer : public ITextureUploadable
-{
-	uint8_t* data;
-	uint32_t width;
-	uint32_t height;
-	TextureChunk chunk;
-public:
-	CharacterRenderer(uint8_t *d, uint32_t w, uint32_t h):data(d),width(w),height(h) {}
-	virtual ~CharacterRenderer() { delete[] data; }
-	//ITextureUploadable interface
-	void sizeNeeded(uint32_t& w, uint32_t& h) const override { w=width; h=height;}
-	uint8_t* upload(bool refresh) override;
-	TextureChunk& getTexture() override;
 };
 
 }

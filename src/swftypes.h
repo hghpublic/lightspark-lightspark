@@ -41,6 +41,8 @@
 #ifdef BIG_ENDIAN
 #include <algorithm>
 #endif
+#define TWIPS_FACTOR 20.0
+
 #define BUILTIN_STRINGS_CHAR_MAX 0x10000 // strings 0-0xffff are one-char strings of the corresponding unicode char
 namespace lightspark
 {
@@ -1181,6 +1183,7 @@ public:
 	}
 };
 
+
 struct RectF;
 class RECT
 {
@@ -1489,7 +1492,6 @@ public:
 	bool empty:1;
 	TEXTRECORD(DefineTextTag* p):parent(p){}
 };
-class CharacterRenderer;
 class SHAPE
 {
 	friend std::istream& operator>>(std::istream& stream, SHAPE& v);

@@ -22,16 +22,14 @@
 
 #include <vector>
 #include "backends/geometry.h"
-#include "backends/graphics.h"
-#include "forwards/scripting/toplevel/Vector.h"
-#include "forwards/scripting/flash/display/DisplayObject.h"
-#include "forwards/scripting/flash/display/Graphics.h"
 
 namespace lightspark
 {
 class RenderContext;
 class InteractiveObject;
+class InvalidateQueue;
 class DefineMorphShapeTag;
+class Vector;
 
 class TokenContainer
 {

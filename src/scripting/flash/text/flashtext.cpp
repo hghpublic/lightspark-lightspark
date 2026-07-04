@@ -27,7 +27,6 @@
 #include "scripting/class.h"
 #include "compat.h"
 #include "backends/geometry.h"
-#include "backends/graphics.h"
 #include "backends/rendering_context.h"
 #include "backends/cachedsurface.h"
 #include "scripting/argconv.h"

@@ -25,7 +25,6 @@
 #include "compat.h"
 #include "asobject.h"
 #include "timer.h"
-#include "backends/graphics.h"
 #include "backends/decoder.h"
 #include "backends/urlutils.h"
 #include "threading.h"

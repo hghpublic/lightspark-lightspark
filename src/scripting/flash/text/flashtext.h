@@ -25,6 +25,7 @@
 #include "asobject.h"
 #include "scripting/flash/display/flashdisplay.h"
 #include "3rdparty/pugixml/src/pugixml.hpp"
+#include "backends/textdata.h"
 
 // according to TextLineMetrics specs, there are always 2 pixels added to each side of a textfield
 #define TEXTFIELD_PADDING 40

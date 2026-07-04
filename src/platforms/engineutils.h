@@ -34,6 +34,7 @@
 #include "compat.h"
 #include "threading.h"
 #include "backends/graphics.h"
+#include "backends/textdata.h"
 
 #define LIGHTSPARK_AUDIO_BUFFERSIZE 512
 

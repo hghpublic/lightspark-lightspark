@@ -26,7 +26,7 @@
 #include <iostream>
 #include "swftypes.h"
 #include "backends/geometry.h"
-#include "backends/graphics.h"
+#include "backends/textdata.h"
 
 namespace lightspark
 {

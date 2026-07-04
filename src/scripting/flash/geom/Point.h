@@ -22,7 +22,6 @@
 
 #include "compat.h"
 #include "asobject.h"
-#include "backends/graphics.h"
 
 namespace lightspark
 {

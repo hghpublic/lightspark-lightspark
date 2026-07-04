@@ -41,7 +41,6 @@ class TextData;
 class LineData;
 class RefreshableDrawable;
 class InvalidateQueue;
-class CharacterRenderer;
 class ITextureUploadable;
 
 };

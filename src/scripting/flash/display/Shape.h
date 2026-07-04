@@ -27,6 +27,7 @@ namespace lightspark
 {
 
 class DefineShapeTag;
+class Graphics;
 class Shape: public DisplayObject, public TokenContainer
 {
 protected:

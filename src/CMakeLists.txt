@@ -55,6 +55,7 @@ SET(LIBSPARK_SOURCES
   backends/shapesbuilder.cpp
   backends/sdl/event_loop.cpp
   backends/streamcache.cpp
+  backends/textdata.cpp
   backends/urlutils.cpp
   backends/xml_support.cpp
   parsing/amf3_generator.cpp

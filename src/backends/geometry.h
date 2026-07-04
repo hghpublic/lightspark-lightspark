@@ -81,6 +81,62 @@ std::ostream& operator<<(std::ostream& s, const Vector2Tmpl<T>& v)
 	return s;
 }
 
+struct RectF
+{
+	Vector2f min;
+	Vector2f max;
+	Vector2f tl() const { return min; }
+	Vector2f tr() const { return Vector2f(max.x, min.y); }
+	Vector2f bl() const { return Vector2f(min.x, max.y); }
+	Vector2f br() const { return max; }
+	Vector2f size() const { return max - min; }
+	RectF _union(const RectF& r) const
+	{
+		return RectF {
+				Vector2f(
+					dmin(min.x, r.min.x),
+					dmin(min.y, r.min.y)
+				),
+				Vector2f(
+					dmax(max.x, r.max.x),
+					dmax(max.y, r.max.y)
+				)
+		};
+	}
+	bool intersects(const RectF& r) const
+	{
+		return
+			(
+				min.x <= r.max.x &&
+				max.x >= r.min.x &&
+				min.y <= r.max.y &&
+				max.y >= r.min.y
+			);
+	}
+	RectF operator*(const MATRIX& r) const
+	{
+		auto p0 = r.multiply2D(tl());
+		auto p1 = r.multiply2D(bl());
+		auto p2 = r.multiply2D(tr());
+		auto p3 = r.multiply2D(br());
+		return RectF {
+					Vector2f(
+						dmin(dmin(p0.x, p1.x), dmin(p2.x, p3.x)),
+						dmin(dmin(p0.y, p1.y), dmin(p2.y, p3.y))
+					),
+					Vector2f(
+						dmax(dmax(p0.x, p1.x), dmax(p2.x, p3.x)),
+						dmax(dmax(p0.y, p1.y), dmax(p2.y, p3.y))
+					)
+		};
+	}
+	RectF& operator*=(const MATRIX& r) { return *this = *this * r; }
+	template<typename T>
+	RectF operator/(const T& value) { return RectF { min / value, max / value }; }
+	template<typename T>
+	RectF& operator/=(const T& value) { return *this = *this / value; }
+};
+
 enum GEOM_TOKEN_TYPE { STRAIGHT=0, CURVE_QUADRATIC, MOVE, SET_FILL, SET_STROKE, CLEAR_FILL, CLEAR_STROKE, CURVE_CUBIC, FILL_KEEP_SOURCE, FILL_TRANSFORM_TEXTURE };
 
 union floatVec

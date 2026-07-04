@@ -25,7 +25,7 @@
 #include "smartrefs.h"
 #include "swftypes.h"
 #include "backends/geometry.h"
-#include "backends/graphics.h"
+#include "backends/textdata.h"
 #include "backends/colortransformbase.h"
 #include "memory_support.h"
 
@@ -37,6 +37,9 @@ namespace lightspark
 class RenderContext;
 class Array;
 class DisplayObject;
+class CachedSurface;
+class RenderDisplayObjectToBitmapContainer;
+class TextureChunk;
 
 struct FilterData
 {

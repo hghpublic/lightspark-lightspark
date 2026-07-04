@@ -20,14 +20,13 @@
 #ifndef BACKENDS_RENDERING_CONTEXT_H
 #define BACKENDS_RENDERING_CONTEXT_H 1
 
-#include "forwards/scripting/flash/display/DisplayObject.h"
-#include "forwards/scripting/flash/geom/flashgeom.h"
 #include <stack>
 #include <unordered_map>
 #include "threading.h"
-#include "backends/graphics.h"
 #include "backends/colortransformbase.h"
-
+#ifdef ENABLE_CAIRO
+#include <cairo.h>
+#endif
 namespace lightspark
 {
 
@@ -35,6 +34,8 @@ enum VertexAttrib { VERTEX_ATTRIB=0, COLOR_ATTRIB, TEXCOORD_ATTRIB};
 
 class Rectangle;
 class EngineData;
+class CachedSurface;
+class TextureChunk;
 
 struct Transform2D
 {
@@ -223,6 +224,7 @@ public:
 	bool handleGLErrors() const;
 };
 #ifdef ENABLE_CAIRO
+class ColorTransform;
 class CairoRenderContext
 {
 private:
