@@ -25,7 +25,7 @@
 
 namespace lightspark
 {
-enum ALIGNMENT {AS_NONE = 0, AS_LEFT, AS_RIGHT, AS_CENTER };
+enum ALIGNMENT {AS_NONE = 0, AS_LEFT, AS_RIGHT, AS_CENTER, AS_JUSTIFY };
 class TextData;
 
 struct FormatText
@@ -82,6 +82,7 @@ public:
 	,leftMargin(0)
 	,rightMargin(0)
 	,indent(0)
+	,blockIndent(0)
 	,leading(0)
 	,textWidth(0)
 	,textHeight(0)
@@ -114,6 +115,7 @@ public:
 	uint32_t leftMargin;
 	uint32_t rightMargin;
 	uint32_t indent;
+	uint32_t blockIndent;
 	int32_t leading;
 	uint32_t textWidth;
 	uint32_t textHeight;

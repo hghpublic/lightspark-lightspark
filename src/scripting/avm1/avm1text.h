@@ -33,11 +33,16 @@ class AVM1TextField: public TextField
 public:
 	AVM1TextField(ASWorker* wrk,Class_base* c, const TextData& textData=TextData(), bool _selectable=true, bool readOnly=true, const char* varname="", DefineEditTextTag* _tag=nullptr)
 		:TextField(wrk,c,textData,_selectable,readOnly,varname,_tag)
-	{}
+	{
+		subtype=SUBTYPE_AVM1TEXTFIELD;
+	}
 	static void sinit(Class_base* c);
 	bool AVM1HandleMouseEvent(EventDispatcher* dispatcher, MouseEvent *e) override;
 	bool AVM1HandlePressedEvent(ASObject *dispobj, bool fromMouse) override;
 	bool AVM1HandleKeyboardEvent(KeyboardEvent *e) override;
+
+	ASFUNCTION_ATOM(_getWidth);
+	ASFUNCTION_ATOM(_getHeight);
 };
 class AVM1TextFormat: public TextFormat
 {

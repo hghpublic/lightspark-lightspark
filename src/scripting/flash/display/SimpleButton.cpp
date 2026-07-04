@@ -77,7 +77,7 @@ _NR<DisplayObject> SimpleButton::hitTestImpl(const Vector2f& globalPoint, const 
 			return NullRef;
 
 		const auto hitPoint = hitTestState->getMatrix().getInverted().multiply2D(localPoint);
-		ret = hitTestState->hitTest(globalPoint, hitPoint, type,false);
+		ret = hitTestState->hitTest(localPoint, hitPoint, type,false);
 	}
 	else
 	{
@@ -88,7 +88,7 @@ _NR<DisplayObject> SimpleButton::hitTestImpl(const Vector2f& globalPoint, const 
 				return NullRef;
 
 			const auto hitPoint = hitTestState->getMatrix().getInverted().multiply2D(localPoint);
-			ret = hitTestState->hitTest(globalPoint, hitPoint, type,false);
+			ret = hitTestState->hitTest(localPoint, hitPoint, type,false);
 			if (ret)
 				break;
 		}

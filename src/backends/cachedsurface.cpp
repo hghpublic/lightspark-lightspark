@@ -955,6 +955,10 @@ void CachedSurface::renderImpl(SystemState* sys, RenderContext& ctxt, RenderDisp
 							case ALIGNMENT::AS_RIGHT:
 								nvgTextAlign(nvgctxt,NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
 								break;
+							case ALIGNMENT::AS_JUSTIFY:
+								LOG(LOG_NOT_IMPLEMENTED,"justify alignment when rendering system font text");
+								nvgTextAlign(nvgctxt,NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+								break;
 						}
 						nvgTextBox(nvgctxt,TEXTFIELD_PADDING/TWIPS_FACTOR,ypos,state->textdata.width/TWIPS_FACTOR,(*it).text.raw_buf(),nullptr);
 						ypos += state->textdata.fontSize+state->textdata.leading/TWIPS_FACTOR;

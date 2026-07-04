@@ -35,10 +35,12 @@
 #include "scripting/toplevel/Array.h"
 #include "scripting/toplevel/Integer.h"
 #include "scripting/toplevel/toplevel.h"
+#include "scripting/toplevel/Global.h"
 
 using namespace std;
 using namespace lightspark;
 
+#define BULLER_INDENT 36.0
 void AntiAliasType::sinit(Class_base* c)
 {
 	CLASS_SETUP_NO_CONSTRUCTOR(c, ASObject, CLASS_FINAL | CLASS_SEALED);
@@ -127,7 +129,7 @@ TextField::TextField(ASWorker* wrk, Class_base* c, const TextData& textData, boo
 	,TextData(textData)
 	,TokenContainer(this)
 	,type(ET_READ_ONLY)
-	,antiAliasType(AA_NORMAL)
+	,antiAliasType(AA_ADVANCED)
 	,gridFitType(GF_PIXEL)
 	,textInteractionMode(TI_NORMAL)
 	,restrictChars(asAtomHandler::nullAtom)
@@ -143,6 +145,7 @@ TextField::TextField(ASWorker* wrk, Class_base* c, const TextData& textData, boo
 	,linemutex(new Mutex())
 	,inAVM1syncVar(false)
 	,inUpdateVarBinding(false)
+	,isHtml(false)
 	,alwaysShowSelection(false)
 	,caretIndex(-1)
 	,condenseWhite(false)
@@ -163,6 +166,13 @@ TextField::TextField(ASWorker* wrk, Class_base* c, const TextData& textData, boo
 		tabEnabled = asAtomHandler::trueAtom;
 	}
 	fillstyleTextColor.push_back(0xff);
+	if (tag)
+	{
+		this->antiAliasType = tag->UseFlashType ? AA_ADVANCED : AA_NORMAL;
+		this->sharpness = tag->Sharpness;
+		this->thickness = tag->Thickness;
+		this->align = ALIGNMENT(tag->Align+1);
+	}
 }
 
 TextField::~TextField()
@@ -337,7 +347,7 @@ bool TextField::boundsRect(number_t& xmin, number_t& xmax, number_t& ymin, numbe
 		else
 			xmax=max(0.0f,float(textWidth+autosizeposition))+2*TEXTFIELD_PADDING+ (tag ? tag->Bounds.Xmin : 0.0f);
 		ymin=tag ? tag->Bounds.Ymin : 0.0f;
-		ymax=max(0.0f,float(height)+(tag ? tag->Bounds.Ymin :0.0f)+float(2*TEXTFIELD_PADDING));
+		ymax=max(0.0f,float(height)+(tag ? tag->Bounds.Ymin :0.0f));
 		return true;
 	}
 	xmin=tag->Bounds.Xmin;
@@ -427,6 +437,7 @@ ASFUNCTIONBODY_ATOM(TextField,_getAutoSize)
 	switch(th->autoSize)
 	{
 		case AS_NONE:
+		case AS_JUSTIFY:
 			ret = asAtomHandler::fromString(wrk->getSystemState(),"none");
 			return;
 		case AS_LEFT:
@@ -552,10 +563,13 @@ void TextField::setSizeAndPositionFromAutoSize(bool updatewidth)
 			}
 			linemutex->unlock();
 			break;
-		default:
+		case AS_LEFT:
 			autosizeposition = 0;
 			if (updatewidth && !wordWrap)
 				width = textWidth+TEXTFIELD_PADDING*2;
+			break;
+		default:
+			autosizeposition = 0;
 			break;
 	}
 	height = textHeight+TEXTFIELD_PADDING*2;
@@ -591,7 +605,7 @@ ASFUNCTIONBODY_ATOM(TextField,_setWidth)
 ASFUNCTIONBODY_ATOM(TextField,_getHeight)
 {
 	TextField* th=asAtomHandler::as<TextField>(obj);
-	// it seems that Adobe returns the textHeight if in autoSize mode
+	// it seems that Adobe returns the textHeight when in autoSize mode
 	if (th->autoSize != AS_NONE)
 		asAtomHandler::setUInt(ret,th->textHeight/TWIPS_FACTOR);
 	else
@@ -621,7 +635,16 @@ ASFUNCTIONBODY_ATOM(TextField,_setHeight)
 ASFUNCTIONBODY_ATOM(TextField,_getTextFieldX)
 {
 	TextField* th=asAtomHandler::as<TextField>(obj);
-	asAtomHandler::setNumber(ret, (th->originalXPosition+th->autosizeposition)/TWIPS_FACTOR);
+	switch (th->autoSize)
+	{
+		case AS_RIGHT:
+		case AS_CENTER:
+			DisplayObject::_getX(ret,wrk,obj,args,argslen);
+			break;
+		default:
+			asAtomHandler::setNumber(ret, (th->originalXPosition+th->autosizeposition)/TWIPS_FACTOR);
+			break;
+	}
 }
 ASFUNCTIONBODY_ATOM(TextField,_setTextFieldX)
 {
@@ -704,7 +727,28 @@ ASFUNCTIONBODY_ATOM(TextField,_getTextFormat)
 	format->color= asAtomHandler::fromUInt(th->textColor.toUInt());
 	format->font = asAtomHandler::fromStringID(th->fontname);
 	format->size = asAtomHandler::fromUInt(th->fontSize);
-
+	format->leading = asAtomHandler::fromInt(th->leading/TWIPS_FACTOR);
+	format->leftMargin = asAtomHandler::fromInt(th->leftMargin/TWIPS_FACTOR);
+	format->rightMargin = asAtomHandler::fromInt(th->rightMargin/TWIPS_FACTOR);
+	format->indent = asAtomHandler::fromInt(th->indent/TWIPS_FACTOR);
+	switch (th->align)
+	{
+		case ALIGNMENT::AS_NONE:
+			format->align = asAtomHandler::nullAtom;
+			break;
+		case ALIGNMENT::AS_LEFT:
+			format->align = asAtomHandler::fromString(wrk->getSystemState(),"left");
+			break;
+		case ALIGNMENT::AS_CENTER:
+			format->align = asAtomHandler::fromString(wrk->getSystemState(),"center");
+			break;
+		case ALIGNMENT::AS_RIGHT:
+			format->align = asAtomHandler::fromString(wrk->getSystemState(),"right");
+			break;
+		case ALIGNMENT::AS_JUSTIFY:
+			format->align = asAtomHandler::fromString(wrk->getSystemState(),"justify");
+			break;
+	}
 	LOG(LOG_NOT_IMPLEMENTED, "getTextFormat is not fully implemeted");
 
 	ret = asAtomHandler::fromObject(format);
@@ -776,6 +820,31 @@ ASFUNCTIONBODY_ATOM(TextField,_setTextFormat)
 		th->fontSize = asAtomHandler::toUInt(tf->size);
 		updatesizes = true;
 	}
+	if (!asAtomHandler::isNull(tf->leading) && th->leading != asAtomHandler::toInt(tf->leading)*TWIPS_FACTOR)
+	{
+		th->leading = asAtomHandler::toInt(tf->leading)*TWIPS_FACTOR;
+		updatesizes = true;
+	}
+	if (!asAtomHandler::isNull(tf->leftMargin) && th->leftMargin != asAtomHandler::toInt(tf->leftMargin)*TWIPS_FACTOR)
+	{
+		th->leftMargin = asAtomHandler::toInt(tf->leftMargin)*TWIPS_FACTOR;
+		updatesizes = true;
+	}
+	if (!asAtomHandler::isNull(tf->rightMargin) && th->rightMargin != asAtomHandler::toInt(tf->rightMargin)*TWIPS_FACTOR)
+	{
+		th->rightMargin = asAtomHandler::toInt(tf->rightMargin)*TWIPS_FACTOR;
+		updatesizes = true;
+	}
+	if (!asAtomHandler::isNull(tf->indent) && th->indent != asAtomHandler::toInt(tf->indent)*TWIPS_FACTOR)
+	{
+		th->indent = asAtomHandler::toInt(tf->indent)*TWIPS_FACTOR;
+		updatesizes = true;
+	}
+	if (!asAtomHandler::isNull(tf->blockIndent) && th->blockIndent != asAtomHandler::toInt(tf->blockIndent)*TWIPS_FACTOR)
+	{
+		th->blockIndent = asAtomHandler::toInt(tf->blockIndent)*TWIPS_FACTOR;
+		updatesizes = true;
+	}
 	if (updatesizes)
 	{
 		th->linemutex->lock();
@@ -783,11 +852,12 @@ ASFUNCTIONBODY_ATOM(TextField,_setTextFormat)
 		if (th->wordWrap)
 		{
 			FormatText format(*th);
-			th->setText(th->getText().raw_buf(),false,&format);
+			// reset text to single line
+			th->setText(th->getText(UINT32_MAX,true).raw_buf(),false,&format);
 		}
 		th->linemutex->unlock();
 		th->updateSizes(true);
-		th->setSizeAndPositionFromAutoSize();
+		th->setSizeAndPositionFromAutoSize(false);
 		th->hasChanged=true;
 		th->setNeedsTextureRecalculation();
 	}
@@ -1288,19 +1358,25 @@ ASFUNCTIONBODY_ATOM(TextField,getParagraphLength)
 
 void TextField::afterSetLegacyMatrix()
 {
+	setupOriginalPosition();
+	textUpdated();
+}
+void TextField::setupOriginalPosition()
+{
 	originalXPosition = getMatrix().getTranslateX();
 	originalWidth = width;
-	textUpdated();
 }
 
 void TextField::validateThickness(number_t /*oldValue*/)
 {
-	thickness = dmin(dmax(thickness, -200.), 200.);
+	if (needsActionScript3())
+		thickness = dmin(dmax(thickness, -200.), 200.);
 }
 
 void TextField::validateSharpness(number_t /*oldValue*/)
 {
-	sharpness = dmin(dmax(sharpness, -400.), 400.);
+	if (needsActionScript3())
+		sharpness = dmin(dmax(sharpness, -400.), 400.);
 }
 
 void TextField::validateScrollH(int32_t oldValue)
@@ -1388,7 +1464,16 @@ void TextField::updateSizes(bool updateformat)
 		(*it).textwidth=w;
 		(*it).height=h;
 		bool listchanged=false;
-		if (wordWrap && width > TEXTFIELD_PADDING*2 && uint32_t(w) > width-TEXTFIELD_PADDING*2)
+		uint32_t realwidth = width;
+		if (!it->format.leftmargin.empty())
+			realwidth -= parseNumber(it->format.leftmargin)*TWIPS_FACTOR;
+		if (!it->format.rightmargin.empty())
+			realwidth -= parseNumber(it->format.rightmargin)*TWIPS_FACTOR;
+		if (it->format.bullet)
+			realwidth -= BULLER_INDENT*TWIPS_FACTOR;
+		if (wordWrap
+			&& realwidth > TEXTFIELD_PADDING*2
+			&& uint32_t(w) > realwidth-TEXTFIELD_PADDING*2)
 		{
 			// calculate lines for wordwrap
 			tiny_string text =(*it).text;
@@ -1396,23 +1481,25 @@ void TextField::updateSizes(bool updateformat)
 			while (c != tiny_string::npos && c != 0)
 			{
 				getTextSizes(getSystemState(),(*it).format,ef,text.substr(0,c),w,h);
-				if (w <= width-TEXTFIELD_PADDING*2)
+				if (w <= realwidth-TEXTFIELD_PADDING*2)
 				{
 					if(w>tw)
 						tw = w;
 					(*it).textwidth=w;
-					(*it).text = text.substr(0,c);
+					(*it).text = text.substr(0,c).removeWhitespace();
 					textline t;
 					t.autosizeposition=0;
-					t.text=text.substr(c+1,UINT32_MAX);
-					getTextSizes(getSystemState(),(*it).format,ef,t.text,w,h);
+					text = text.substr(c,UINT32_MAX);
+					if (!it->format.leftmargin.empty())
+						text = text.removeWhitespace();
+					getTextSizes(getSystemState(),(*it).format,ef,text,w,h);
+					t.text = text;
 					t.textwidth=w;
 					t.height=h;
 					t.format= (*it).format;
 					it = textlines.insert(++it,t);
 					listchanged=true;
-					text =t.text;
-					if (uint32_t(w) <= width-TEXTFIELD_PADDING*2)
+					if (uint32_t(w) <= realwidth-TEXTFIELD_PADDING*2)
 					{
 						if(w>tw)
 							tw = w;
@@ -1430,7 +1517,7 @@ void TextField::updateSizes(bool updateformat)
 			it++;
 		th+=h;
 		if (it != textlines.end())
-			th+=this->leading;
+			th+=this->leading/TWIPS_FACTOR;
 	}
 	linemutex->unlock();
 	if(w>tw)
@@ -1509,7 +1596,7 @@ tiny_string TextField::toHtmlText()
 				continue;
 			if (openParagraph==0 || it->needsnewline || format.paragraph || (prevlinebreaks && !it->text.empty()))// || (swfversion < 7 && !format.bullet))
 			{
-				if ((!islastline && openParagraph==0)
+				if (((!islastline || firstline) && openParagraph==0)
 					|| (format.paragraph)
 					|| (it->needsnewline)
 					|| (prevlinebreaks && !it->text.empty())
@@ -1718,6 +1805,7 @@ void TextField::setHtmlText(const tiny_string& html)
 	}
 	linemutex->unlock();
 
+	isHtml=true;
 	if (this->isConstructed() && !this->TextIsEqual(oldtext,oldformats))
 	{
 		hasChanged=true;
@@ -1825,8 +1913,6 @@ void TextField::afterLegacyInsert()
 	}
 	originalWidth=width;
 	avm1SyncTagVar();
-	updateSizes(true);
-	setSizeAndPositionFromAutoSize();
 	InteractiveObject::afterLegacyInsert();
 }
 
@@ -1945,7 +2031,6 @@ void TextField::requestInvalidation(InvalidateQueue* q, bool forceTextureRefresh
 		TokenContainer::requestInvalidation(q,forceTextureRefresh);
 	else
 	{
-		updateSizes();
 		requestInvalidationFilterParent(q);
 		q->addToInvalidateQueue(this);
 	}
@@ -1953,9 +2038,7 @@ void TextField::requestInvalidation(InvalidateQueue* q, bool forceTextureRefresh
 
 void TextField::defaultEventBehavior(_R<Event> e)
 {
-	if (this->type != ET_EDITABLE)
-		return;
-	if (e->type == "keyDown")
+	if (this->type != ET_EDITABLE && e->type == "keyDown")
 	{
 		KeyboardEvent* ev = e->as<KeyboardEvent>();
 		const LSModifier& modifiers = ev->getModifiers();
@@ -2013,6 +2096,108 @@ void TextField::defaultEventBehavior(_R<Event> e)
 				LOG(LOG_NOT_IMPLEMENTED,"TextField keyDown event handling for modifier "<<modifiers<<" and char code "<<hex<<ev->getCharCode());
 		}
 	}
+	else if (e->type =="mouseDown")
+	{
+		if (this->isHtml && !this->textlines.empty())
+		{
+			MouseEvent* ev = e->as<MouseEvent>();
+			int xpos=0,ypos=0;
+			tiny_string url;
+			auto it = textlines.begin();
+			while (it != textlines.end())
+			{
+				if (!it->format.url.empty()
+					&& ypos <= ev->localY*TWIPS_FACTOR
+					&& ypos+it->height > ev->localY*TWIPS_FACTOR
+					&& xpos <= ev->localX*TWIPS_FACTOR
+					&& xpos+it->textwidth > ev->localX*TWIPS_FACTOR  )
+				{
+					url = it->format.url;
+					break;
+				}
+				xpos += it->textwidth;
+				uint32_t curparagraph = it->format.paragraph;
+				int curheight = it->height * (it->linebreaks+1);
+				++it;
+				if (it == textlines.end())
+					break;
+				if (it->format.paragraph != curparagraph)
+				{
+					xpos = 0;
+					ypos += curheight;
+					if (ypos > ev->localY*TWIPS_FACTOR)
+						break;
+				}
+			}
+			if (!url.empty())
+			{
+				if (this->needsActionScript3())
+				{
+					LOG(LOG_NOT_IMPLEMENTED,"[TextField] click on URL:"<<url);
+				}
+				else
+				{
+					if (url.startsWith("asfunction:"))
+					{
+						tiny_string funcname = url.substr_bytes(11,url.numBytes()-11);
+						tiny_string arg;
+						uint32_t split = funcname.findFirst(",");
+						if (split != tiny_string::npos)
+						{
+							arg = funcname.substr(split+1,tiny_string::npos);
+							funcname = funcname.substr(0,split);
+						}
+						if (!funcname.empty())
+						{
+							asAtom func = asAtomHandler::invalidAtom;
+							multiname m(nullptr);
+							m.name_type = multiname::NAME_STRING;
+							m.name_s_id = getSystemState()->getUniqueStringId(funcname);
+							m.isAttribute = false;
+							asAtom obj = asAtomHandler::fromObject(this);
+							if (getParent())
+							{
+								DisplayObject* clip = getParent();
+								uint32_t pathindex = funcname.findLast(".");
+								if (pathindex != tiny_string::npos)
+								{
+									tiny_string path = funcname.substr(0,pathindex);
+									clip = getParent()->AVM1GetClipFromPath(path);
+									m.name_s_id = getSystemState()->getUniqueStringId(funcname.substr(pathindex+1,tiny_string::npos));
+								}
+								if (clip)
+								{
+									clip->AVM1getVariableByMultiname(func,m,GET_VARIABLE_OPTION::NONE,getInstanceWorker(),false);
+									obj = asAtomHandler::fromObject(clip);
+								}
+							}
+							if (!asAtomHandler::isValid(func))
+							{
+								AVM1getVariableByMultiname(func,m,GET_VARIABLE_OPTION::NONE,getInstanceWorker());
+								obj = asAtomHandler::fromObject(this);
+							}
+							if (!asAtomHandler::isValid(func))
+							{
+								this->getSystemState()->avm1global->getVariableByMultiname(func,m,GET_VARIABLE_OPTION::NONE,getInstanceWorker());
+								obj = asAtomHandler::fromObject(this->getSystemState()->avm1global);
+							}
+
+							if (asAtomHandler::is<IFunction>(func))
+							{
+								asAtom ret = asAtomHandler::invalidAtom;
+								asAtom args = arg.empty() ? asAtomHandler::undefinedAtom : asAtomHandler::fromString(getSystemState(),arg);
+								asAtomHandler::callFunction(func,getInstanceWorker(),ret,obj,&args,1,false);
+								ASATOM_DECREF(ret);
+							}
+							ASATOM_DECREF(func);
+						}
+					}
+					else
+						LOG(LOG_ERROR,"[TextField] click on invalid URL:"<<url);
+				}
+			}
+		}
+	}
 }
 
 IDrawable* TextField::invalidate(bool smoothing)
@@ -2059,7 +2244,7 @@ IDrawable* TextField::invalidate(bool smoothing)
 	if (this->border)
 	{
 		lineStyleBorder.Color=this->borderColor;
-		lineStyleBorder.Width=20;
+		lineStyleBorder.Width=0;//hairline
 		tokens.filltokens->tokens.push_back(GeomToken(SET_STROKE).uval);
 		tokens.filltokens->tokens.push_back(GeomToken(lineStyleBorder).uval);
 		tokens.filltokens->tokens.push_back(GeomToken(MOVE).uval);
@@ -2103,7 +2288,7 @@ IDrawable* TextField::invalidate(bool smoothing)
 	}
 	if (embeddedFont)
 	{
-		int32_t startposy = TEXTFIELD_PADDING+bymin+(embeddedFont->getAscent()+embeddedFont->getDescent())*TWIPS_FACTOR*fontSize/1024;
+		int32_t startposy = TEXTFIELD_PADDING+bymin+(embeddedFont->getAscent())*fontSize/1024*TWIPS_FACTOR;
 
 		linemutex->lock();
 		RGBA color(textColor.Red,textColor.Green,textColor.Blue,0xff);
@@ -2111,15 +2296,25 @@ IDrawable* TextField::invalidate(bool smoothing)
 		bool first = tk->empty();
 		for (auto it = textlines.begin(); it != textlines.end(); it++)
 		{
+			if (startposy > (int32_t)this->height)
+				break;
 			if ((*it).text.empty())
 			{
-				startposy += this->leading+(embeddedFont->getAscent()+embeddedFont->getDescent()+embeddedFont->getLeading())*fontSize/1024;
+				startposy += (embeddedFont->getAscent()+embeddedFont->getDescent()+embeddedFont->getLeading())*fontSize/1024*TWIPS_FACTOR;
 				continue;
 			}
 			if (!first)
 				tk = tk->next = new tokensVector();
+
 			first = false;
 			int startposx = (TEXTFIELD_PADDING+autosizeposition+(*it).autosizeposition);
+			if (it->format.bullet)
+			{
+				tiny_string bullet = tiny_string::fromChar(0x2022); // unicode bullet char
+				tk = embeddedFont->fillTextTokens(*tk,bullet,(*it).format,color,leading,startposx,startposy);
+				startposx += BULLER_INDENT*TWIPS_FACTOR;
+				tk = tk->next = new tokensVector();
+			}
 			if (isPassword)
 			{
 				tiny_string pwtxt;
@@ -2129,7 +2324,7 @@ IDrawable* TextField::invalidate(bool smoothing)
 			}
 			else
 				tk = embeddedFont->fillTextTokens(*tk,(*it).text,(*it).format,color,leading,startposx,startposy);
-			startposy += (this->leading+(embeddedFont->getAscent()+embeddedFont->getDescent()+embeddedFont->getLeading())*fontSize/1024)*TWIPS_FACTOR;
+			startposy += (embeddedFont->getAscent()+embeddedFont->getDescent()+embeddedFont->getLeading())*fontSize/1024*TWIPS_FACTOR;
 		}
 		linemutex->unlock();
 		if (tokens.empty())
@@ -2281,14 +2476,14 @@ bool TextField::HtmlTextParser::for_each(pugi::xml_node &node)
 	if (name == "br" || name == "sbr") // adobe seems to interpret the unknown tag <sbr /> as <br> ?
 	{
 		if (parentname=="textformat" && !format.bullet)
-			format.paragraph = true;
+			format.paragraph = ++textdata->maxParagraphID;
 		textdata->appendLineBreak(currentDepth == prevDepth
 								  ,((parentname=="textformat" || format.bullet) && strlen(node.parent().value())==0) || (node.previous_sibling().type() == pugi::node_null && node.next_sibling().type() == pugi::node_null)
 								  ,format);
 	}
 	if (name == "p")
 	{
-		format.paragraph=true;
+		format.paragraph= ++textdata->maxParagraphID;
 		for (auto it=node.attributes_begin(); it!=node.attributes_end(); ++it)
 		{
 			tiny_string attrname = it->name();
@@ -2322,6 +2517,8 @@ bool TextField::HtmlTextParser::for_each(pugi::xml_node &node)
 	{
 		if (format.paragraph)
 			emptycontent=false;
+		else
+			format.paragraph= ++textdata->maxParagraphID;
 		for (auto it=node.attributes_begin(); it!=node.attributes_end(); ++it)
 		{
 			tiny_string attrname = it->name();
@@ -2836,9 +3033,10 @@ bool StaticText::boundsRect(number_t& xmin, number_t& xmax, number_t& ymin, numb
 _NR<DisplayObject> StaticText::hitTestImpl(const Vector2f& globalPoint, const Vector2f& localPoint, HIT_TYPE type, bool interactiveObjectsOnly)
 {
 	number_t xmin,xmax,ymin,ymax;
+
 	if (tag && tag->UseFlashType)
 	{
-		// when using advancet text rendering, hittesting is done on the transformed bounds rect
+		// when using advanced text rendering, hittesting is done on the transformed bounds rect
 		getBounds(xmin,xmax,ymin,ymax,getConcatenatedMatrix(false,false));
 		if( xmin > globalPoint.x
 			|| globalPoint.x > xmax

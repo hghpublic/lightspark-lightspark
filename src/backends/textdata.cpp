@@ -198,8 +198,6 @@ void TextData::getTextSizes(SystemState* sys, const FormatText& format,FontTag* 
 	number_t l= parseNumber(format.leading,sys->getSwfVersion()<11)*TWIPS_FACTOR;
 	if (!std::isnan(l))
 		th += l;
-	// tw = ceil(tw);
-	// th = ceil(th);
 }
 
 bool TextData::TextIsEqual(const std::vector<tiny_string>& lines, const vector<FormatText>& oldformats) const
@@ -251,7 +249,9 @@ FontTag* TextData::checkEmbeddedFont(DisplayObject* d)
 
 void TextData::checklastline(bool needsadditionalline)
 {
-	if (!textlines.empty() && ((textlines.back().text.empty() && !textlines.back().linebreaks) || textlines.back().format.paragraph || textlines.back().format.bullet))
+	if (!textlines.empty()
+		&& (textlines.back().format.paragraph
+			|| textlines.back().format.bullet))
 		textlines.back().needsnewline=true;
 	if (needsadditionalline && swfversion < 8)
 	{
@@ -277,9 +277,7 @@ void TextData::checklastline(bool needsadditionalline)
 	}
 	if (!textlines.empty())
 	{
-		if ((textlines.back().text.empty() && !textlines.back().linebreaks) || textlines.back().format.paragraph)
-			textlines.back().needsnewline=true;
-		else if (!textlines.back().text.isWhiteSpaceOnly())
+		if (!textlines.back().text.isWhiteSpaceOnly())
 		{
 			bool canhaveparagraph = !textlines.back().needsnewline;
 			if (textlines.size() > 1 && !((textlines.end()-2)->needsnewline))

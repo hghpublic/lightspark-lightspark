@@ -459,10 +459,10 @@ DefineEditTextTag::DefineEditTextTag(RECORDHEADER h, std::istream& in, RootMovie
 	}
 	textData.width = (Bounds.Xmax-Bounds.Xmin);
 	textData.height = (Bounds.Ymax-Bounds.Ymin);
-	textData.leading = Leading/20;
-	textData.leftMargin = LeftMargin/20;
-	textData.rightMargin = RightMargin/20;
-	textData.indent = Indent/20;
+	textData.leading = Leading;
+	textData.leftMargin = LeftMargin;
+	textData.rightMargin = RightMargin;
+	textData.indent = Indent;
 	textData.isPassword = Password;
 	if(HasText)
 	{
@@ -950,9 +950,9 @@ void DefineFont2Tag::getTextBounds(const tiny_string& text, const FormatText& fo
 {
 	int tokenscaling = format.fontSize * this->scaling;
 	width=0;
-	height= (number_t(FontAscent+FontDescent+FontLeading)/1024.0)* tokenscaling * TWIPS_FACTOR;
+	height= (number_t(FontAscent+FontDescent)/1024.0)* tokenscaling;
 	number_t tmpwidth=0;
-
+	int lettercount=0;
 	for (CharIterator it = text.begin(); it != text.end(); it++)
 	{
 		if (*it == 13 || *it == 10)
@@ -969,18 +969,20 @@ void DefineFont2Tag::getTextBounds(const tiny_string& text, const FormatText& fo
 				if (CodeTable[i] == *it)
 				{
 					if (FontFlagsHasLayout)
-						tmpwidth += number_t(FontAdvanceTable[i])/1024.0 * format.fontSize;
+						tmpwidth += floor(number_t(FontAdvanceTable[i]* tokenscaling)/1024.0);
 					else
 						tmpwidth += tokenscaling;
 					tmpwidth += format.letterspacing;
+					lettercount++;
 					break;
 				}
 			}
 		}
 	}
+	if (tmpwidth)
+		tmpwidth += lettercount*format.letterspacing*TWIPS_FACTOR;
 	if (width < tmpwidth)
 		width = tmpwidth;
-	width *= TWIPS_FACTOR;
 }
 
 DefineFont2Tag::DefineFont2Tag(RECORDHEADER h, std::istream& in, RootMovieClip* root):FontTag(h, 20, root)
@@ -1166,7 +1168,7 @@ void DefineFont3Tag::getTextBounds(const tiny_string& text, const FormatText& fo
 				if (CodeTable[i] == *it)
 				{
 					if (FontFlagsHasLayout)
-						tmpwidth += floor(number_t(FontAdvanceTable[i])/1024.0 * tokenscaling);
+						tmpwidth += floor(number_t(FontAdvanceTable[i]* tokenscaling)/1024.0);
 					else
 					{
 						tokensVector tmptokens;

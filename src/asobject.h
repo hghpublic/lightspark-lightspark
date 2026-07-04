@@ -1583,6 +1583,7 @@ class AVM1Point;
 class AVM1Rectangle;
 class AVM1Sound;
 class AVM1Super_object;
+class AVM1TextField;
 class AVM1Transform;
 class AVM1XMLDocument;
 class AVM1XMLNode;
@@ -1745,6 +1746,7 @@ template<> inline bool ASObject::is<AVM1Point>() const { return subtype == SUBTY
 template<> inline bool ASObject::is<AVM1Rectangle>() const { return subtype == SUBTYPE_AVM1RECTANGLE; }
 template<> inline bool ASObject::is<AVM1Sound>() const { return subtype == SUBTYPE_AVM1SOUND; }
 template<> inline bool ASObject::is<AVM1Super_object>() const { return subtype == SUBTYPE_AVM1SUPEROBJECT; }
+template<> inline bool ASObject::is<AVM1TextField>() const { return subtype == SUBTYPE_AVM1TEXTFIELD; }
 template<> inline bool ASObject::is<AVM1Transform>() const { return subtype == SUBTYPE_AVM1TRANSFORM; }
 template<> inline bool ASObject::is<AVM1XMLDocument>() const { return subtype == SUBTYPE_AVM1XMLDOCUMENT; }
 template<> inline bool ASObject::is<AVM1XMLNode>() const { return subtype == SUBTYPE_AVM1XMLNODE; }
@@ -1795,7 +1797,9 @@ template<> inline bool ASObject::is<DisplayObject>() const
 		   || subtype == SUBTYPE_LOADER
 		   || subtype == SUBTYPE_AVM1MOVIECLIP
 		   || subtype == SUBTYPE_AVM1MOVIE
-		   || subtype == SUBTYPE_STATICTEXT;
+		   || subtype == SUBTYPE_STATICTEXT
+		   || subtype == SUBTYPE_AVM1TEXTFIELD
+		;
 }
 template<> inline bool ASObject::is<DisplayObjectContainer>() const { return subtype==SUBTYPE_DISPLAYOBJECTCONTAINER || subtype==SUBTYPE_STAGE || subtype==SUBTYPE_ROOTMOVIECLIP || subtype==SUBTYPE_SPRITE || subtype == SUBTYPE_MOVIECLIP || subtype == SUBTYPE_TEXTLINE || subtype == SUBTYPE_SIMPLEBUTTON || subtype==SUBTYPE_LOADER || subtype == SUBTYPE_AVM1MOVIECLIP || subtype == SUBTYPE_AVM1MOVIE; }
 template<> inline bool ASObject::is<DropShadowFilter>() const { return subtype==SUBTYPE_DROPSHADOWFILTER; }
@@ -1854,7 +1858,9 @@ template<> inline bool ASObject::is<InteractiveObject>() const
 		   || subtype == SUBTYPE_SIMPLEBUTTON
 		   || subtype == SUBTYPE_LOADER
 		   || subtype == SUBTYPE_AVM1MOVIECLIP
-		   || subtype == SUBTYPE_AVM1MOVIE;
+		   || subtype == SUBTYPE_AVM1MOVIE
+		   || subtype == SUBTYPE_AVM1TEXTFIELD
+		;
 }
 template<> inline bool ASObject::is<KeyboardEvent>() const { return subtype==SUBTYPE_KEYBOARD_EVENT; }
 template<> inline bool ASObject::is<LocalConnection>() const { return subtype==SUBTYPE_LOCALCONNECTION || subtype==SUBTYPE_AVM1LOCALCONNECTION; }
@@ -1905,7 +1911,7 @@ template<> inline bool ASObject::is<SyntheticFunction>() const { return subtype=
 template<> inline bool ASObject::is<Template_base>() const { return type==T_TEMPLATE; }
 template<> inline bool ASObject::is<TextBlock>() const { return subtype==SUBTYPE_TEXTBLOCK; }
 template<> inline bool ASObject::is<TextElement>() const { return subtype==SUBTYPE_TEXTELEMENT; }
-template<> inline bool ASObject::is<TextField>() const { return subtype==SUBTYPE_TEXTFIELD; }
+template<> inline bool ASObject::is<TextField>() const { return subtype==SUBTYPE_TEXTFIELD || subtype == SUBTYPE_AVM1TEXTFIELD; }
 template<> inline bool ASObject::is<TextFormat>() const { return subtype==SUBTYPE_TEXTFORMAT; }
 template<> inline bool ASObject::is<TextJustifier>() const { return subtype==SUBTYPE_TEXTJUSTIFIER || subtype==SUBTYPE_SPACEJUSTIFIER || subtype==SUBTYPE_EASTASIANJUSTIFIER; }
 template<> inline bool ASObject::is<TextLine>() const { return subtype==SUBTYPE_TEXTLINE; }

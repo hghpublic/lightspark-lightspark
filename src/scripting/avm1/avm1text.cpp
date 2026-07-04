@@ -29,7 +29,6 @@ using namespace lightspark;
 void AVM1TextField::sinit(Class_base* c)
 {
 	CLASS_SETUP(c, ASObject, _constructor, CLASS_DYNAMIC_NOT_FINAL);
-	InteractiveObject::AVM1SetupMethods(c);
 	c->isSealed = false;
 	c->prototype->setDeclaredMethodByQName("antiAliasType","",c->getSystemState()->getBuiltinFunction(TextField::_getAntiAliasType),GETTER_METHOD,false,false);
 	c->prototype->setDeclaredMethodByQName("antiAliasType","",c->getSystemState()->getBuiltinFunction(TextField::_setAntiAliasType),SETTER_METHOD,false,false);
@@ -89,6 +88,11 @@ void AVM1TextField::sinit(Class_base* c)
 	c->prototype->setDeclaredMethodByQName("wordWrap","",c->getSystemState()->getBuiltinFunction(TextField::_setWordWrap),SETTER_METHOD,false,false);
 	c->prototype->setDeclaredMethodByQName("wordWrap","",c->getSystemState()->getBuiltinFunction(TextField::_getWordWrap),GETTER_METHOD,false,false);
 
+	c->prototype->setDeclaredMethodByQName("tabEnabled","",c->getSystemState()->getBuiltinFunction(_setter_tabEnabled),SETTER_METHOD,false,false);
+	c->prototype->setDeclaredMethodByQName("tabEnabled","",c->getSystemState()->getBuiltinFunction(_getter_tabEnabled,0,Class<Boolean>::getClassUninitialized(c->getSystemState())),GETTER_METHOD,false,false);
+	c->prototype->setDeclaredMethodByQName("tabIndex","",c->getSystemState()->getBuiltinFunction(AVM1_setTabIndex),SETTER_METHOD,false,false);
+	c->prototype->setDeclaredMethodByQName("tabIndex","",c->getSystemState()->getBuiltinFunction(AVM1_getTabIndex,0,Class<ASObject>::getClassUninitialized(c->getSystemState())),GETTER_METHOD,false,false);
+
 	c->prototype->setVariableByQName("getTextFormat","",c->getSystemState()->getBuiltinFunction(TextField::_getTextFormat),DYNAMIC_TRAIT);
 	c->prototype->setVariableByQName("setTextFormat","",c->getSystemState()->getBuiltinFunction(TextField::_setTextFormat),DYNAMIC_TRAIT);
 
@@ -96,6 +100,21 @@ void AVM1TextField::sinit(Class_base* c)
 	c->prototype->setVariableByQName("replaceSel","",c->getSystemState()->getBuiltinFunction(TextField::_replaceSelectedText,1),DYNAMIC_TRAIT);
 }
 
+ASFUNCTIONBODY_ATOM(AVM1TextField,_getWidth)
+{
+	AVM1TextField* th=asAtomHandler::as<AVM1TextField>(obj);
+	asAtomHandler::setNumber(ret,number_t(th->width)/TWIPS_FACTOR);
+}
+
+ASFUNCTIONBODY_ATOM(AVM1TextField,_getHeight)
+{
+	AVM1TextField* th=asAtomHandler::as<AVM1TextField>(obj);
+	// it seems that Adobe returns the textHeight when in autoSize mode
+	if (th->autoSize != AS_NONE)
+		asAtomHandler::setNumber(ret,number_t(th->textHeight)/TWIPS_FACTOR);
+	else
+		asAtomHandler::setNumber(ret,number_t(th->height)/TWIPS_FACTOR);
+}
 
 bool AVM1TextField::AVM1HandleMouseEvent(EventDispatcher* dispatcher, MouseEvent* e)
 {

@@ -154,6 +154,7 @@ private:
 	Mutex* linemutex;
 	bool inAVM1syncVar;
 	bool inUpdateVarBinding;
+	bool isHtml;
 	void getTextBounds(const tiny_string &txt, number_t &xmin, number_t &xmax, number_t &ymin, number_t &ymax);
 protected:
 	void afterSetLegacyMatrix() override;
@@ -180,6 +181,7 @@ public:
 	bool isFocusable(bool fromMouse) override;
 	int getTextCharCount();
 	void refreshSurfaceState() override;
+	void setupOriginalPosition();
 
 	ASFUNCTION_ATOM(_constructor);
 	ASFUNCTION_ATOM(appendText);

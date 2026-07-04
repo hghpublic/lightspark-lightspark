@@ -50,6 +50,7 @@
 #include "scripting/toplevel/Number.h"
 #include "scripting/toplevel/Integer.h"
 #include "scripting/avm1/avm1display.h"
+#include "scripting/avm1/avm1text.h"
 #include "scripting/avm1/avm1transform.h"
 #include "utils/array.h"
 #include <algorithm>
@@ -2713,7 +2714,10 @@ asAtom DisplayObject::getPropertyByIndex(size_t idx, ASWorker* wrk)
 	switch (idx)
 	{
 		case 0:// x
-			_getX(ret,wrk,obj,nullptr,0);
+			if (is<AVM1TextField>())
+				AVM1TextField::_getTextFieldX(ret,wrk,obj,nullptr,0);
+			else
+				_getX(ret,wrk,obj,nullptr,0);
 			break;
 		case 1:// y
 			_getY(ret,wrk,obj,nullptr,0);
@@ -2739,10 +2743,16 @@ asAtom DisplayObject::getPropertyByIndex(size_t idx, ASWorker* wrk)
 			_getVisible(ret,wrk,obj,nullptr,0);
 			break;
 		case 8:// width
-			_getWidth(ret,wrk,obj,nullptr,0);
+			if (is<AVM1TextField>())
+				AVM1TextField::_getWidth(ret,wrk,obj,nullptr,0);
+			else
+				_getWidth(ret,wrk,obj,nullptr,0);
 			break;
 		case 9:// height
-			_getHeight(ret,wrk,obj,nullptr,0);
+			if (is<AVM1TextField>())
+				AVM1TextField::_getHeight(ret,wrk,obj,nullptr,0);
+			else
+				_getHeight(ret,wrk,obj,nullptr,0);
 			break;
 		case 10:// rotation
 			_getRotation(ret,wrk,obj,nullptr,0);
@@ -2808,7 +2818,10 @@ void DisplayObject::setPropertyByIndex(size_t idx, const asAtom& val, ASWorker* 
 	switch (idx)
 	{
 		case 0:// x
-			_setX(ret,wrk,obj,&value,1);
+			if (is<AVM1TextField>())
+				AVM1TextField::_setTextFieldX(ret,wrk,obj,&value,1);
+			else
+				_setX(ret,wrk,obj,&value,1);
 			break;
 		case 1:// y
 			_setY(ret,wrk,obj,&value,1);
@@ -2826,10 +2839,16 @@ void DisplayObject::setPropertyByIndex(size_t idx, const asAtom& val, ASWorker* 
 			_setVisible(ret,wrk,obj,&value,1);
 			break;
 		case 8:// width
-			_setWidth(ret,wrk,obj,&value,1);
+			if (is<AVM1TextField>())
+				AVM1TextField::_setWidth(ret,wrk,obj,&value,1);
+			else
+				_setWidth(ret,wrk,obj,&value,1);
 			break;
 		case 9:// height
-			_setHeight(ret,wrk,obj,&value,1);
+			if (is<AVM1TextField>())
+				AVM1TextField::_setHeight(ret,wrk,obj,&value,1);
+			else
+				_setHeight(ret,wrk,obj,&value,1);
 			break;
 		case 10:// rotation
 			_setRotation(ret,wrk,obj,&value,1);
