@@ -39,16 +39,25 @@ std::string SpecialFolder::getSpecialFolder(REFKNOWNFOLDERID folderID)
 }
 #endif
 
+std::string SpecialFolder::getEnv(const char* name)
+{
+	std::string res;
+	char* env = getenv("XDG_CONFIG_HOME");
+	if (env)
+		res = env;
+	return res;
+}
+
 std::string SpecialFolder::get_user_config_dir()
 {
-	std::string res = getenv("XDG_CONFIG_HOME");
+	std::string res	= getEnv("XDG_CONFIG_HOME");
 #ifdef _WIN32
 	if (res.empty())
 		res = getSpecialFolder(FOLDERID_LocalAppData);
 #else
 	if (res.empty())
 	{
-		res = getenv("HOME");
+		res = getEnv("HOME");
 		res += "/.config";
 	}
 #endif
@@ -57,14 +66,14 @@ std::string SpecialFolder::get_user_config_dir()
 
 std::string SpecialFolder::get_user_cache_dir()
 {
-	std::string res = getenv("XDG_CACHE_HOME");
+	std::string res = getEnv("XDG_CACHE_HOME");
 #ifdef _WIN32
 	if (res.empty())
 		res = getSpecialFolder(FOLDERID_InternetCache);
 #else
 	if (res.empty())
 	{
-		res = getenv("HOME");
+		res = getEnv("HOME");
 		res += "/.cache";
 	}
 #endif
@@ -72,14 +81,14 @@ std::string SpecialFolder::get_user_cache_dir()
 }
 std::string SpecialFolder::get_user_data_dir()
 {
-	std::string res = getenv("XDG_DATA_HOME");
+	std::string res = getEnv("XDG_DATA_HOME");
 #ifdef _WIN32
 	if (res.empty())
 		res = getSpecialFolder(FOLDERID_LocalAppData);
 #else
 	if (res.empty())
 	{
-		res = getenv("HOME");
+		res = getEnv("HOME");
 		res += "/.local/share";
 	}
 #endif
@@ -87,7 +96,7 @@ std::string SpecialFolder::get_user_data_dir()
 }
 void SpecialFolder::get_system_config_dirs(std::list<tiny_string>& res)
 {
-	tiny_string paths = getenv ("XDG_CONFIG_DIRS");
+	tiny_string paths = getEnv("XDG_CONFIG_DIRS");
 #ifdef _WIN32
 	if (paths.empty())
 		paths = getSpecialFolder(FOLDERID_ProgramData);

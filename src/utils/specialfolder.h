@@ -34,6 +34,7 @@ private:
 #ifdef _WIN32
 	static std::string getSpecialFolder(REFKNOWNFOLDERID folderID);
 #endif
+	static std::string getEnv(const char* name);
 public:
 	static std::string get_user_config_dir();
 	static std::string get_user_cache_dir();
