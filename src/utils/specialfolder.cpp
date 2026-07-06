@@ -1,7 +1,8 @@
 /**************************************************************************
     Lightspark, a free flash player implementation
 
-	Copyright (C) 2026  Ludger Krämer <dbluelle@onlinehome.de>
+    Copyright (C) 2026  Ludger Krämer <dbluelle@onlinehome.de>
+    Copyright (C) 2026  mr b0nk 500 (b0nk@b0nk.xyz)
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -41,11 +42,8 @@ std::string SpecialFolder::getSpecialFolder(REFKNOWNFOLDERID folderID)
 
 std::string SpecialFolder::getEnv(const char* name)
 {
-	std::string res;
-	char* env = getenv("XDG_CONFIG_HOME");
-	if (env)
-		res = env;
-	return res;
+	auto env = getenv(name);
+	return env != nullptr ? env : "";
 }
 
 std::string SpecialFolder::get_user_config_dir()

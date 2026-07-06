@@ -1,7 +1,8 @@
 /**************************************************************************
     Lightspark, a free flash player implementation
 
-	Copyright (C) 2026  Ludger Krämer <dbluelle@onlinehome.de>
+    Copyright (C) 2026  Ludger Krämer <dbluelle@onlinehome.de>
+    Copyright (C) 2026  mr b0nk 500 (b0nk@b0nk.xyz)
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
