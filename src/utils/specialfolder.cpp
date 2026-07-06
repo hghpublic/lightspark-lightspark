@@ -45,6 +45,12 @@ std::string SpecialFolder::get_user_config_dir()
 #ifdef _WIN32
 	if (res.empty())
 		res = getSpecialFolder(FOLDERID_LocalAppData);
+#else
+	if (res.empty())
+	{
+		res = getenv("HOME");
+		res += "/.config";
+	}
 #endif
 	return res;
 }
@@ -55,6 +61,12 @@ std::string SpecialFolder::get_user_cache_dir()
 #ifdef _WIN32
 	if (res.empty())
 		res = getSpecialFolder(FOLDERID_InternetCache);
+#else
+	if (res.empty())
+	{
+		res = getenv("HOME");
+		res += "/.cache";
+	}
 #endif
 	return res;
 }
@@ -64,6 +76,12 @@ std::string SpecialFolder::get_user_data_dir()
 #ifdef _WIN32
 	if (res.empty())
 		res = getSpecialFolder(FOLDERID_LocalAppData);
+#else
+	if (res.empty())
+	{
+		res = getenv("HOME");
+		res += "/.local/share";
+	}
 #endif
 	return res;
 }
@@ -73,6 +91,9 @@ void SpecialFolder::get_system_config_dirs(std::list<tiny_string>& res)
 #ifdef _WIN32
 	if (paths.empty())
 		paths = getSpecialFolder(FOLDERID_ProgramData);
+#else
+	if (paths.empty())
+		paths = "/etc/xdg";
 #endif
 	res = paths.split(':');
 }
