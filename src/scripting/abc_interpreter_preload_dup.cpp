@@ -325,14 +325,7 @@ void preload_dup(preloadstate& state,std::vector<typestackentry>& typestack,memo
 				// remove unneeded jumptargets
 				for (auto itr = jumptargetstoremove.begin(); itr != jumptargetstoremove.end(); itr++)
 				{
-					auto itj = state.jumptargets.find(*itr);
-					if (itj != state.jumptargets.end())
-					{
-						if ((*itj).second == 1)
-							state.jumptargets.erase(itj);
-						else
-							(*itj).second--;
-					}
+					state.removeOneJumpTarget(*itr);
 				}
 
 				// remove used operand

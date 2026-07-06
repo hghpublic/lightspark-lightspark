@@ -1679,7 +1679,7 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 			itexctarget++;
 		}
 
-		// search backwards for jumps that point inside the unreachable area and adjust realUnreachableEnd
+		// search backwards for jumps that point inside the unreachable area and adjust realNextReachable
 		auto itpoint = jumppoints.rbegin();
 		while (itpoint != jumppoints.rend())
 		{
@@ -1690,16 +1690,33 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 			itpoint++;
 		}
 		// remove all jump targets inside the adjusted unreachable area
-		auto ittarget = state.jumptargets.rbegin();
-		while (ittarget != state.jumptargets.rend())
+		std::queue<int32_t> removeablejumppoints;
+		auto ittarget = jumppoints.rbegin();
+		while (ittarget != jumppoints.rend())
 		{
-			if (ittarget->first <= realUnreachableStart)
+			int startpoint = ittarget->first;
+			int endpoint = ittarget->second;
+			if (startpoint <= realUnreachableStart)
 				break; // beginning of unreachable area reached, we can stop now
-			if (ittarget->first < realNextReachable && exceptionjumptargets.find(ittarget->first) == exceptionjumptargets.end())
-			{
-				state.jumptargets.erase(ittarget->first); // jump is inside unreachable area, can be removed
-			}
 			ittarget++;
+			if (exceptionjumptargets.find(endpoint) == exceptionjumptargets.end())
+			{
+				if (startpoint < realNextReachable
+					&& startpoint > realUnreachableStart+1
+					&& endpoint > realUnreachableStart
+					&& endpoint <= realNextReachable)
+				{
+					removeablejumppoints.push(startpoint);
+					state.removeOneJumpTarget(endpoint); // jump source and target inside unreachable area, can be removed
+				}
+				else
+					if (endpoint > realUnreachableStart
+					&& endpoint < realNextReachable)
+				{
+					removeablejumppoints.push(startpoint);
+					state.removeOneJumpTarget(endpoint); // jump target is inside unreachable area, can be removed
+				}
+			}
 		}
 		it++;
 	}
@@ -2704,11 +2721,7 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 					// skip complete jump
 					for (int32_t i = 0; i < j; i++)
 						code.readbyte();
-					auto it = state.jumptargets.find(p+j+1);
-					if (it != state.jumptargets.end() && it->second > 1)
-						state.jumptargets[p+j+1]--;
-					else
-						state.jumptargets.erase(p+j+1);
+					state.removeOneJumpTarget(p+j+1);
 					state.refreshOldNewPosition(code);
 					opcode_skipped=true;
 				}
@@ -2736,11 +2749,7 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 					{
 						state.refreshOldNewPosition(code);
 						skipunreachablecode(state,code);
-						auto it = state.jumptargets.find(code.tellg()+1);
-						if (it != state.jumptargets.end() && it->second > 1)
-							state.jumptargets[code.tellg()+1]--;
-						else
-							state.jumptargets.erase(code.tellg()+1);
+						state.removeOneJumpTarget(code.tellg()+1);
 						state.refreshOldNewPosition(code);
 						if (int(code.tellg())-p1 >= j)
 						{
@@ -2779,11 +2788,7 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 					{
 						state.refreshOldNewPosition(code);
 						skipunreachablecode(state,code);
-						auto it = state.jumptargets.find(code.tellg()+1);
-						if (it != state.jumptargets.end() && it->second > 1)
-							state.jumptargets[code.tellg()+1]--;
-						else
-							state.jumptargets.erase(code.tellg()+1);
+						state.removeOneJumpTarget(code.tellg()+1);
 						state.refreshOldNewPosition(code);
 						if (int(code.tellg())-p1 >= j)
 						{
@@ -2830,11 +2835,7 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 					{
 						state.refreshOldNewPosition(code);
 						skipunreachablecode(state,code);
-						auto it = state.jumptargets.find(code.tellg()+1);
-						if (it != state.jumptargets.end() && it->second > 1)
-							state.jumptargets[code.tellg()+1]--;
-						else
-							state.jumptargets.erase(code.tellg()+1);
+						state.removeOneJumpTarget(code.tellg()+1);
 						state.refreshOldNewPosition(code);
 						if (int(code.tellg())-p1 >= j)
 						{
@@ -2888,11 +2889,7 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 					{
 						state.refreshOldNewPosition(code);
 						skipunreachablecode(state,code);
-						auto it = state.jumptargets.find(code.tellg()+1);
-						if (it != state.jumptargets.end() && it->second > 1)
-							state.jumptargets[code.tellg()+1]--;
-						else
-							state.jumptargets.erase(code.tellg()+1);
+						state.removeOneJumpTarget(code.tellg()+1);
 						state.refreshOldNewPosition(code);
 						if (int(code.tellg())-p1 >= j)
 						{
@@ -4138,7 +4135,8 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 		assert (state.oldnewpositions.find(p) != state.oldnewpositions.end());
 		if (state.oldnewpositions.find(p+itj->second) == state.oldnewpositions.end() && p+itj->second < code.tellg())
 		{
-			LOG(LOG_ERROR,"preloadfunction: jump position not found:"<<p<<" "<<itj->second<<" "<<code.tellg());
+			LOG(LOG_ERROR,"preloadfunction: jump position not found:"<<p<<" "<<itj->second<<" "<<code.tellg()<<" "<<function->getSystemState()->getStringFromUniqueId(function->functionname));
+			wrk->dumpStacktrace();
 			createError<VerifyError>(wrk,kInvalidBranchTargetError);
 		}
 		else

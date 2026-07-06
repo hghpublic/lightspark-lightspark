@@ -68,6 +68,15 @@ void preloadstate::checkClearOperands(uint32_t p, Class_base** lastlocalresultty
 	if (!atexceptiontarget && jumptargets.find(p) != jumptargets.end())
 		clearOperands(*this,true,lastlocalresulttype);
 }
+
+void preloadstate::removeOneJumpTarget(int32_t targetpos)
+{
+	auto it = jumptargets.find(targetpos);
+	if (it != jumptargets.end() && it->second > 1)
+		jumptargets[targetpos]--;
+	else
+		jumptargets.erase(targetpos);
+}
 void skipjump(preloadstate& state,uint8_t& b,memorystream& code,uint32_t& pos,bool jumpInCode)
 {
 	if (b == 0x10) // jump
@@ -91,11 +100,7 @@ void skipjump(preloadstate& state,uint8_t& b,memorystream& code,uint32_t& pos,bo
 		{
 			// skip unreachable code
 			pos = p+j;
-			auto it = state.jumptargets.find(p+j+1);
-			if (it != state.jumptargets.end() && it->second > 1)
-				state.jumptargets[p+j+1]--;
-			else
-				state.jumptargets.erase(p+j+1);
+			state.removeOneJumpTarget(p+j+1);
 			state.oldnewpositions[p+j] = (int32_t)state.preloadedcode.size();
 			b = code.peekbyteFromPosition(pos);
 			if (jumpInCode)
@@ -1798,13 +1803,7 @@ void skipunreachablecode(preloadstate& state, memorystream& code, bool updatetar
 				// make sure that unreachable jumps get erased from jumptargets
 				int32_t p1 = code.reads24()+code.tellg()+1;
 				if (updatetargets)
-				{
-					auto it = state.jumptargets.find(p1);
-					if (it != state.jumptargets.end() && it->second > 1)
-						state.jumptargets[p1]--;
-					else
-						state.jumptargets.erase(p1);
-				}
+					state.removeOneJumpTarget(p1);
 				break;
 			}
 		}

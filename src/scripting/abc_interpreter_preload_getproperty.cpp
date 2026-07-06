@@ -79,7 +79,7 @@ void preload_getproperty(preloadstate& state, std::vector<typestackentry>& types
 					{
 						bool isborrowed=false;
 						variable* v = obj->findVariableByMultiname(*name,obj->getClass(),nullptr,&isborrowed,false,state.worker);
-						if (v && v->kind == CONSTANT_TRAIT && asAtomHandler::isInvalid(v->getter) )
+						if (v && (v->kind == CONSTANT_TRAIT || v->isfinal) && asAtomHandler::isInvalid(v->getter) )
 						{
 							state.operandlist.back().removeArg(state);
 							state.operandlist.pop_back();

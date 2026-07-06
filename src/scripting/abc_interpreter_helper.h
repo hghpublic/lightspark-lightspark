@@ -78,6 +78,7 @@ struct preloadstate
 	preloadstate(SyntheticFunction* _f, ASWorker* _w);
 	void refreshOldNewPosition(memorystream& code, int codepos=-1);
 	void checkClearOperands(uint32_t p,Class_base** lastlocalresulttype);
+	void removeOneJumpTarget(int32_t targetpos);
 };
 
 struct operands
