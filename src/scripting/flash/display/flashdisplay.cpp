@@ -534,9 +534,13 @@ _NR<DisplayObject> DisplayObjectContainer::hitTestImpl(const Vector2f& globalPoi
 						if (!ret->is<InteractiveObject>())
 						{
 							// we have hit a non-interactive object, so "this" is be the hit target
+							// but on AS3 we continue to search the children as there may be an enabled InteractiveObject that is also hit
 							hit_this=true;
 							ret.reset();
-							break;;
+							if (this->needsActionScript3())
+								continue;
+							else
+								break;
 						}
 						else if (!ret->as<InteractiveObject>()->isHittable(type))
 						{
