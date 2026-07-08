@@ -177,6 +177,7 @@ enum
 	kWorkerIllegalCallToStart               = 1521,
 	kInvalidSocket                          = 2002,
 	kInvalidParamError                      = 2004,
+	kParamIncorrectTypeError                = 2005,
 	kParamRangeError                        = 2006,
 	kNullPointerError                       = 2007,
 	kInvalidEnumError                       = 2008,

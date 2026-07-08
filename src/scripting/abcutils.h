@@ -97,7 +97,6 @@ struct call_context
 	}
 };
 typedef ASObject* (*synt_function)(call_context* cc);
-typedef void (*as_atom_function)(asAtom&, ASWorker*, asAtom&, asAtom*, const unsigned int);
 
 
 class AVM1context

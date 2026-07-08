@@ -27,7 +27,6 @@
 #include "asobject.h"
 #include "exceptions.h"
 #include "threading.h"
-#include "scripting/abcutils.h"
 #include "scripting/toplevel/Class_base.h"
 #include "scripting/toplevel/IFunction.h"
 #include "scripting/toplevel/AVM1Function.h"

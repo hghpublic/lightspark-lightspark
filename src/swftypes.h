@@ -1928,6 +1928,8 @@ public:
 	std::vector<uint8_t> actions;
 };
 class ASWorker;
+typedef void (*as_atom_function)(asAtom&, ASWorker*, asAtom&, asAtom*, const unsigned int);
+
 ASObject* abstract_i(ASWorker* wrk, int32_t i);
 ASObject* abstract_ui(ASWorker* wrk, uint32_t i);
 ASObject* abstract_d(ASWorker* wrk, number_t i);

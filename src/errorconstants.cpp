@@ -175,6 +175,7 @@ const std::map<int, const char *> errorMessages = {
 	{kWorkerIllegalCallToStart, "Only the worker's parent may call start."},
 	{kInvalidSocket, "Operation attempted on invalid socket."},
 	{kInvalidParamError, "One of the parameters is invalid."},
+	{kParamIncorrectTypeError, "Parameter %1 is of the incorrect type. Should be type %2."},
 	{kParamRangeError, "The supplied index is out of bounds."},
 	{kNullPointerError, "Parameter %1 must be non-null."},
 	{kInvalidEnumError, "Parameter %1 must be one of the accepted values."},

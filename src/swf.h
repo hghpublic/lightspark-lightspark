@@ -44,7 +44,6 @@
 #include <tsl/ordered_set.h>
 #include "swftypes.h"
 #include "memory_support.h"
-#include "scripting/abcutils.h"
 
 using namespace std;
 

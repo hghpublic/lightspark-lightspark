@@ -203,7 +203,8 @@ bool BitmapData::checkDisposed(asAtom& ret)
 	ret = needsActionScript3() ? asAtomHandler::undefinedAtom : asAtomHandler::fromInt(-1);
 	if(pixels.isNull() || (needsActionScript3() && !this->isConstructed()))
 	{
-		createError<ArgumentError>(getInstanceWorker(),kInvalidBitmapData);
+		if (needsActionScript3())
+			createError<ArgumentError>(getInstanceWorker(),kInvalidBitmapData);
 		return true;
 	}
 	return false;
@@ -257,7 +258,9 @@ ASFUNCTIONBODY_ATOM(BitmapData,_constructor)
 	}
 	th->transparent=transparent;
 	th->pixels->fromRawData(nullptr,width,height);
+	th->pixels->setNeedsClear(true);
 	RGBA color(c,alpha);
+	th->pixels->nanoVGImageBackgroundcolor=color;
 	th->drawDisplayObject(nullptr, MATRIX(),true, BLENDMODE_NORMAL ,nullptr,nullptr,false,&color);
 }
 
@@ -769,7 +772,10 @@ ASFUNCTIONBODY_ATOM(BitmapData,hitTest)
 		number_t secondPointY=0;
 		if (wrk->needsActionScript3() && !secondBitmapDataPoint.isNull() && !secondBitmapDataPoint->is<Point>())
 		{
-			createError<ArgumentError>(wrk,kCheckTypeFailedError,
+			if (secondBitmapDataPoint->is<Null>())
+				createError<ArgumentError>(wrk,kNullPointerError);
+			else
+				createError<ArgumentError>(wrk,kCheckTypeFailedError,
 									   th->getClassName(),
 									   "secondBitmapDataPoint");
 			return;
@@ -831,9 +837,9 @@ ASFUNCTIONBODY_ATOM(BitmapData,hitTest)
 			ret = asAtomHandler::trueAtom;
 	}
 	else
-		createError<TypeError>(wrk,kCheckTypeFailedError,
-				      secondObject->getClassName(),
-				      " Point, Rectangle, Bitmap, or BitmapData");
+		createError<TypeError>(wrk,kParamIncorrectTypeError,
+					  "secondObject",
+					  "Point, Rectangle, Bitmap, or BitmapData");
 }
 
 ASFUNCTIONBODY_ATOM(BitmapData,scroll)
