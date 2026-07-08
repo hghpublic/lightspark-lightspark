@@ -1145,7 +1145,9 @@ void ABCVm::abc_construct_constant_localresult(call_context* context)
 	LOG_CALL( "construct_noargs_c_lr");
 	asAtom res=asAtomHandler::invalidAtom;
 	construct_noargs_intern(context,res,obj);
-	replacelocalresult(context,instrptr->local3.pos,res);
+	asAtom oldres = CONTEXT_GETLOCAL(context,instrptr->local3.pos);
+	if (oldres.uintval != res.uintval)
+		replacelocalresult(context,instrptr->local3.pos,res);
 	++(context->exec_pos);
 }
 void ABCVm::abc_construct_local_localresult(call_context* context)
@@ -1155,7 +1157,9 @@ void ABCVm::abc_construct_local_localresult(call_context* context)
 	LOG_CALL( "construct_noargs_l_lr ");
 	asAtom res=asAtomHandler::invalidAtom;
 	construct_noargs_intern(context,res,obj);
-	replacelocalresult(context,instrptr->local3.pos,res);
+	asAtom oldres = CONTEXT_GETLOCAL(context,instrptr->local3.pos);
+	if (oldres.uintval != res.uintval)
+		replacelocalresult(context,instrptr->local3.pos,res);
 	++(context->exec_pos);
 }
 void ABCVm::abc_returnvalue_constant(call_context* context)
@@ -1281,7 +1285,9 @@ void ABCVm::abc_constructpropStaticName_constant_localresult(call_context* conte
 	LOG_CALL( "constructprop_noargs_c_lr " << *name);
 	asAtom res=asAtomHandler::invalidAtom;
 	constructpropnoargs_intern(context,res,obj,name,context->exec_pos->cacheobj2);
-	replacelocalresult(context,instrptr->local3.pos,res);
+	asAtom oldres = CONTEXT_GETLOCAL(context,instrptr->local3.pos);
+	if (oldres.uintval != res.uintval)
+		replacelocalresult(context,instrptr->local3.pos,res);
 	++(context->exec_pos);
 }
 void ABCVm::abc_constructpropStaticName_local_localresult(call_context* context)
@@ -1293,7 +1299,9 @@ void ABCVm::abc_constructpropStaticName_local_localresult(call_context* context)
 	LOG_CALL( "constructprop_noargs_l_lr " << *name);
 	asAtom res=asAtomHandler::invalidAtom;
 	constructpropnoargs_intern(context,res,obj,name,nullptr);
-	replacelocalresult(context,instrptr->local3.pos,res);
+	asAtom oldres = CONTEXT_GETLOCAL(context,instrptr->local3.pos);
+	if (oldres.uintval != res.uintval)
+		replacelocalresult(context,instrptr->local3.pos,res);
 	++(context->exec_pos);
 }
 void ABCVm::abc_getlex_localresult(call_context* context)
@@ -4828,7 +4836,9 @@ void ABCVm::abc_constructpropMultiArgs_constant_localresult(call_context* contex
 	LOG_CALL( "constructprop_MultiArgs_c_lr");
 	asAtom res=asAtomHandler::invalidAtom;
 	constructpropMultiArgs_intern(context,res,obj);
-	replacelocalresult(context,instrptr->local3.pos,res);
+	asAtom oldres = CONTEXT_GETLOCAL(context,instrptr->local3.pos);
+	if (oldres.uintval != res.uintval)
+		replacelocalresult(context,instrptr->local3.pos,res);
 	++(context->exec_pos);
 }
 void ABCVm::abc_constructpropMultiArgs_local_localresult(call_context* context)
@@ -4838,6 +4848,8 @@ void ABCVm::abc_constructpropMultiArgs_local_localresult(call_context* context)
 	LOG_CALL( "constructprop_MultiArgs_l_lr ");
 	asAtom res=asAtomHandler::invalidAtom;
 	constructpropMultiArgs_intern(context,res,obj);
-	replacelocalresult(context,instrptr->local3.pos,res);
+	asAtom oldres = CONTEXT_GETLOCAL(context,instrptr->local3.pos);
+	if (oldres.uintval != res.uintval)
+		replacelocalresult(context,instrptr->local3.pos,res);
 	++(context->exec_pos);
 }

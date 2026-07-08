@@ -87,6 +87,13 @@ void preload_dup(preloadstate& state,std::vector<typestackentry>& typestack,memo
 		typestack.push_back(typestack.back());
 		return;
 	}
+	if (code.peekbyte() == 0x29 //pop
+			&& state.jumptargets.find(p+1) == state.jumptargets.end())
+	{
+		// dup followed by pop, can be skipped
+		code.readbyte();
+		return;
+	}
 	bool dupoperand = state.operandlist.empty() && state.lastlocalresultpos != UINT32_MAX;
 	if (dupoperand)
 		state.operandlist.push_back(operands(OP_LOCAL,state.localtypes[state.lastlocalresultpos],state.lastlocalresultpos,0,0));

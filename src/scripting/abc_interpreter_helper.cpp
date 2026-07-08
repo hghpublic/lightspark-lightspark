@@ -2195,7 +2195,39 @@ bool getLexFindClass(preloadstate& state, multiname* name, bool checkfuncscope,s
 	}
 	return false;
 }
-
+void optimize_lastsetlocal(memorystream& codetypes, std::map<int32_t,int32_t>& lastsetlocal,preloadstate& state, uint32_t t)
+{
+	auto it = lastsetlocal.find(t);
+	if (it != lastsetlocal.end())
+	{
+		// local was set previously and never read, "old" setlocal can be replaced by pop
+		// which then will be optimized away in pass 3
+		uint32_t oldpos = it->second;
+		switch ((uint8_t)state.mi->body->code[oldpos])
+		{
+			case 0x63://setlocal
+			{
+				state.mi->body->code[oldpos] = 0x29; //pop
+				uint32_t skippos = codetypes.skipu30FromPosition(oldpos+1);
+				for (uint32_t i = oldpos+1; i < skippos; i++)
+					state.mi->body->code[i] = 0x02; //nop
+				break;
+			}
+			case 0xd4://setlocal_0
+			case 0xd5://setlocal_1
+			case 0xd6://setlocal_2
+			case 0xd7://setlocal_3
+			{
+				state.mi->body->code[oldpos] = 0x29; //pop
+				break;
+			}
+			default:
+				LOG(LOG_ERROR,"preload setlocal optimization wrong original opcode, should not happen:"<<codetypes.tellg()<<"/"<<oldpos<<" "<<hex<<int((uint8_t)state.mi->body->code[oldpos]));
+				state.worker->dumpStacktrace();
+				break;
+		}
+	}
+}
 void preloadFunction_secondPass(preloadstate& state)
 {
 #ifdef ENABLE_OPTIMIZATION
@@ -2203,9 +2235,12 @@ void preloadFunction_secondPass(preloadstate& state)
 	SyntheticFunction* function = state.function;
 	Class_base* currenttype=nullptr;
 	memorystream codetypes(mi->body->code.data(), mi->body->code.size());
+	std::map<int32_t,int32_t> lastsetlocal;
 	uint8_t opcode = 0;
 	while(!codetypes.atend())
 	{
+		if (state.jumptargets.find(codetypes.tellg()) != state.jumptargets.end())
+			lastsetlocal.clear();
 		uint8_t prevopcode=opcode;
 		opcode = codetypes.readbyte();
 		//LOG(LOG_ERROR,"preload pass2:"<<function->getSystemState()->getStringFromUniqueId(function->functionname)<<" "<< codetypes.tellg()-1<<" "<<currenttype<<" "<<hex<<(int)opcode);
@@ -2245,6 +2280,7 @@ void preloadFunction_secondPass(preloadstate& state)
 			case 0x62://getlocal
 			{
 				uint32_t t = codetypes.readu30();
+				lastsetlocal.erase(t);
 				if (state.defaultlocaltypes.size()>t)
 					currenttype=state.defaultlocaltypes[t];
 				else
@@ -2256,6 +2292,7 @@ void preloadFunction_secondPass(preloadstate& state)
 			case 0xd2://getlocal_2
 			case 0xd3://getlocal_3
 			{
+				lastsetlocal.erase(opcode-0xd0);
 				if (state.defaultlocaltypes.size()>uint32_t(opcode-0xd0))
 					currenttype=state.defaultlocaltypes[opcode-0xd0];
 				else
@@ -2323,6 +2360,7 @@ void preloadFunction_secondPass(preloadstate& state)
 			{
 				uint32_t p = codetypes.tellg();
 				uint32_t t = codetypes.readu30();
+				optimize_lastsetlocal(codetypes,lastsetlocal,state,t);
 				if (state.islocalRead.size() > t
 					&& !state.islocalRead[t]
 					&& prevopcode==0x2a)//dup
@@ -2331,6 +2369,8 @@ void preloadFunction_secondPass(preloadstate& state)
 					state.mi->body->code[p-2] = 0x02; //nop
 					state.mi->body->code[p-1] = 0xf0; //debugline
 				}
+				else
+					lastsetlocal[t] = p-1;
 				state.unchangedlocals.erase(t);
 				setdefaultlocaltype(state,t,currenttype);
 				currenttype=nullptr;
@@ -2343,6 +2383,7 @@ void preloadFunction_secondPass(preloadstate& state)
 			{
 				uint32_t p = codetypes.tellg();
 				uint32_t v = opcode-0xd4;
+				optimize_lastsetlocal(codetypes,lastsetlocal,state,v);
 				if (state.islocalRead.size() > v
 					&& !state.islocalRead[v]
 					&& prevopcode==0x2a)//dup
@@ -2351,6 +2392,8 @@ void preloadFunction_secondPass(preloadstate& state)
 					state.mi->body->code[p-2] = 0x02; //nop
 					state.mi->body->code[p-1] = 0x02; //nop
 				}
+				else
+					lastsetlocal[v] = p-1;
 				state.unchangedlocals.erase(v);
 				setdefaultlocaltype(state,v,currenttype);
 				currenttype=nullptr;
@@ -2380,6 +2423,7 @@ void preloadFunction_secondPass(preloadstate& state)
 			}
 			case 0x10://jump
 			{
+				lastsetlocal.clear();
 				int32_t p = codetypes.tellg();
 				int32_t p1 = codetypes.reads24()+codetypes.tellg()+1;
 				if (p1 > p)
@@ -2402,12 +2446,14 @@ void preloadFunction_secondPass(preloadstate& state)
 			case 0x19://ifstricteq
 			case 0x1a://ifstrictne
 			{
+				lastsetlocal.clear();
 				codetypes.reads24();
 				currenttype=nullptr;
 				break;
 			}
 			case 0x11://iftrue
 			{
+				lastsetlocal.clear();
 				int32_t p = codetypes.tellg();
 				int32_t p1 = codetypes.reads24()+codetypes.tellg()+1;
 				if (p1 > p && prevopcode==0x26) //pushtrue
@@ -2419,6 +2465,7 @@ void preloadFunction_secondPass(preloadstate& state)
 			}
 			case 0x12://iffalse
 			{
+				lastsetlocal.clear();
 				int32_t p = codetypes.tellg();
 				int32_t p1 = codetypes.reads24()+codetypes.tellg()+1;
 				if (p1 > p && prevopcode==0x27) //pushfalse
@@ -2430,6 +2477,7 @@ void preloadFunction_secondPass(preloadstate& state)
 			}
 			case 0x1b://lookupswitch
 			{
+				lastsetlocal.clear();
 				codetypes.reads24();
 				uint32_t count = codetypes.readu30();
 				for(unsigned int i=0;i<count+1;i++)
@@ -2493,6 +2541,7 @@ void preloadFunction_secondPass(preloadstate& state)
 			case 0x47://returnvoid
 			case 0x48://returnvalue
 			case 0x03://throw
+				lastsetlocal.clear();
 				skipunreachablecode(state,codetypes,false);
 				currenttype=nullptr;
 				break;
