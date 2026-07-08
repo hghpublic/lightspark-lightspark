@@ -793,7 +793,10 @@ void AVM1MovieClipLoader::AVM1HandleEvent(EventDispatcher *dispatcher, Event* e)
 		asAtom l = asAtomHandler::invalidAtom;
 		this->getVariableByMultiname(l,mlisteners,GET_VARIABLE_OPTION::NONE,wrk);
 		if (!asAtomHandler::is<AVM1Array>(l))
+		{
+			ASATOM_DECREF(l);
 			return;
+		}
 		AVM1Array* listeners = asAtomHandler::as<AVM1Array>(l);
 		std::vector<ASObject*> tmplisteners;
 		tmplisteners.push_back(this);
@@ -917,6 +920,7 @@ void AVM1MovieClipLoader::AVM1HandleEvent(EventDispatcher *dispatcher, Event* e)
 			}
 			it++;
 		}
+		ASATOM_DECREF(l);
 	}
 }
 
@@ -1298,7 +1302,6 @@ ASFUNCTIONBODY_ATOM(AVM1Broadcaster,removeListener)
 		{
 			asAtom o=asAtomHandler::invalidAtom;
 			listeners->at_nocheck(o,i);
-			LOG(LOG_ERROR,"***removelist:"<<asAtomHandler::toDebugString(o)<<" "<<i<<"/"<<listeners->size()<<" "<<asAtomHandler::toDebugString(args[0]));
 			if (asAtomHandler::isEqualStrict(o,wrk,args[0]))
 			{
 				asAtom res;
