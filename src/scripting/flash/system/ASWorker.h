@@ -55,6 +55,7 @@ private:
 	std::vector<ABCContext*> contexts;
 	unordered_map<uint32_t,IFunction*> avm1ClassConstructorsCaseSensitive;
 	unordered_map<uint32_t,IFunction*> avm1ClassConstructorsCaseInsensitive;
+	std::vector<asAtom> undefinedAtomPool; // vector of undefinedAtoms for optimized filling of asAtom array pointers
 	ASObject* gcStart;
 	ASObject* gcEnd;
 public:
@@ -160,6 +161,18 @@ public:
 	std::list<uint8_t*> nativeExtensionStringlist;
 	uint32_t nativeExtensionCallCount;
 	void handleInternalEvent(Event* e);
+	void checkUndefinedAtomPool(uint32_t sizeneeded)
+	{
+		for (uint32_t i = undefinedAtomPool.size(); i < sizeneeded; i++)
+		{
+			undefinedAtomPool.push_back(asAtomHandler::undefinedAtom);
+		}
+	}
+	FORCE_INLINE void fillArrayWithUndefinedAtom(asAtom* arr, uint32_t size)
+	{
+		assert(size < undefinedAtomPool.size());
+		memcpy(arr,undefinedAtomPool.data(),size*sizeof(asAtom));
+	}
 };
 
 }

@@ -159,6 +159,7 @@ FORCE_INLINE void resetLocals(call_context *cc, call_context* saved_cc, const as
 		if (o)
 			o->decRefAndGCCheck();
 	}
+	cc->worker->fillArrayWithUndefinedAtom(cc->locals+1,cc->mi->body->getMaxLocalsWithoutSlots()-1);
 	if (cc->locals[0].uintval != obj.uintval)
 	{
 		LOG_CALL("locals0:"<<asAtomHandler::toDebugString(cc->locals[0]));
@@ -206,6 +207,9 @@ void SyntheticFunction::call(ASWorker* wrk,asAtom& ret, asAtom& obj, asAtom *arg
 		{
 			mi->cc.localslots[i] = &mi->cc.locals[i];
 		}
+		uint32_t lastlocalcount=mi->body->getMaxLocalsWithoutSlots();
+		wrk->checkUndefinedAtomPool(lastlocalcount+1);
+		wrk->fillArrayWithUndefinedAtom(mi->cc.locals,lastlocalcount);
 	}
 	if (saved_cc && saved_cc->exceptionthrown)
 	{
@@ -312,6 +316,8 @@ void SyntheticFunction::call(ASWorker* wrk,asAtom& ret, asAtom& obj, asAtom *arg
 		{
 			cc->localslots[i] = &cc->locals[i];
 		}
+		uint32_t lastlocalcount=mi->body->getMaxLocalsWithoutSlots();
+		wrk->fillArrayWithUndefinedAtom(cc->locals+args_len+1,lastlocalcount-(args_len+1));
 	}
 	else
 	{
@@ -369,9 +375,6 @@ void SyntheticFunction::call(ASWorker* wrk,asAtom& ret, asAtom& obj, asAtom *arg
 			cc->locals[i+1]=asAtomHandler::undefinedAtom;
 		}
 	}
-	uint32_t lastlocalcount=mi->body->getMaxLocals();
-	for(uint32_t i=args_len+1;i<lastlocalcount;++i)
-		(cc->locals+i)->uintval = asAtomHandler::undefinedAtom.uintval;
 	if (mi->body->localsinitialvalues)
 		memcpy(cc->locals+args_len+1,mi->body->localsinitialvalues,(mi->body->local_count-(args_len+1))*sizeof(asAtom));
 
@@ -429,7 +432,9 @@ void SyntheticFunction::call(ASWorker* wrk,asAtom& ret, asAtom& obj, asAtom *arg
 				cc->locals[mi->body->getReturnValuePos()]=asAtomHandler::invalidAtom;
 				// fill additional locals with slots of objects that don't change during execution
 				int i = mi->body->getMaxLocalsWithoutSlots();
+#ifndef NDEBUG
 				int p=0;
+#endif
 				for (auto it = mi->body->localconstantslots.begin(); it != mi->body->localconstantslots.end(); it++)
 				{
 					assert(it->local_pos < (mi->numArgs()-mi->numOptions())+1);
@@ -441,7 +446,9 @@ void SyntheticFunction::call(ASWorker* wrk,asAtom& ret, asAtom& obj, asAtom *arg
 					}
 					else
 						cc->localslots[i] = &asAtomHandler::nullAtom;
+#ifndef NDEBUG
 					p++;
+#endif
 					i++;
 				}
 				//Switch the codeStatus to USED to make sure the method will not be optimized while being used
