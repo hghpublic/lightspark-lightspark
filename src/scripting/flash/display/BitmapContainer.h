@@ -53,6 +53,7 @@ struct RenderDisplayObjectToBitmapContainer
 
 struct BitmapContainerRenderData
 {
+	Mutex mutexRenderCallBitmaps;
 	std::list<ITextureUploadable*> uploads;
 	std::list<RefreshableSurface> surfacesToRefresh;
 	std::queue<RenderDisplayObjectToBitmapContainer> rendercalls;

@@ -101,8 +101,10 @@ private:
 	std::list<RefreshableSurface> surfacesToRefresh;
 
 	ACQUIRE_RELEASE_FLAG(renderToBitmapContainerNeeded);
+	ACQUIRE_RELEASE_FLAG(renderToBitmapContainerWait);
 	Mutex mutexRenderToBitmapContainer;
-	std::queue<_NR<BitmapContainer>> bitmapContainerToRenderTo;
+	ATOMIC_INT32(currentBitmapContainerQueue);
+	std::queue<_NR<BitmapContainer>> bitmapContainerToRenderTo[2];
 
 	std::list<uint32_t> texturesToDelete;
 

@@ -66,13 +66,33 @@ void RenderThread::wait()
 	}
 }
 
-RenderThread::RenderThread(SystemState* s):GLRenderContext(),
-	m_sys(s),status(CREATED),
-	prevUploadJob(nullptr),
-	renderNeeded(false),uploadNeeded(false),resizeNeeded(false),newTextureNeeded(false),canrender(false),
-	event(0),newWidth(0),newHeight(0),scaleX(1),scaleY(1),
-	offsetX(0),offsetY(0),tempBufferAcquired(false),frameCount(0),secsCount(0),initialized(0),refreshNeeded(false),renderToBitmapContainerNeeded(false),
-	screenshotneeded(false),inSettings(false)
+RenderThread::RenderThread(SystemState* s)
+	:GLRenderContext()
+	,m_sys(s)
+	,status(CREATED)
+	,prevUploadJob(nullptr)
+	,renderNeeded(false)
+	,uploadNeeded(false)
+	,resizeNeeded(false)
+	,newTextureNeeded(false)
+	,canrender(false)
+	,event(0)
+	,newWidth(0)
+	,newHeight(0)
+	,scaleX(1)
+	,scaleY(1)
+	,offsetX(0)
+	,offsetY(0)
+	,tempBufferAcquired(false)
+	,frameCount(0)
+	,secsCount(0)
+	,initialized(0)
+	,refreshNeeded(false)
+	,currentBitmapContainerQueue(0)
+	,renderToBitmapContainerNeeded(false)
+	,renderToBitmapContainerWait(false)
+	,screenshotneeded(false)
+	,inSettings(false)
 #ifdef ENABLE_CAIRO
 	,cairoTextureContext(nullptr)
 #endif
@@ -233,17 +253,19 @@ bool RenderThread::doRender(ThreadProfile* profile,Chronometer* chronometer)
 		mutexRefreshSurfaces.unlock();
 		// cleanup bitmaps to render
 		mutexRenderToBitmapContainer.lock();
-		while (!bitmapContainerToRenderTo.empty())
+		while (!bitmapContainerToRenderTo[currentBitmapContainerQueue].empty())
 		{
-			BitmapContainer* bmc = bitmapContainerToRenderTo.front().getPtr();
-			bitmapContainerToRenderTo.pop();
+			BitmapContainer* bmc = bitmapContainerToRenderTo[currentBitmapContainerQueue].front().getPtr();
+			bitmapContainerToRenderTo[currentBitmapContainerQueue].pop();
 			BitmapContainerRenderData* renderdata = bmc->swapRenderData();
 			// destroy temporary bitmaps used for rendering
+			renderdata->mutexRenderCallBitmaps.lock();
 			while (!renderdata->rendercallBitmaps.empty())
 			{
 				(*renderdata->rendercallBitmaps.begin())->resetRenderCall();
 				renderdata->rendercallBitmaps.pop_front();
 			}
+			renderdata->mutexRenderCallBitmaps.unlock();
 		}
 		mutexRenderToBitmapContainer.unlock();
 		return false;
@@ -301,10 +323,15 @@ bool RenderThread::doRender(ThreadProfile* profile,Chronometer* chronometer)
 	if (ACQUIRE_READ(renderToBitmapContainerNeeded))
 	{
 		mutexRenderToBitmapContainer.lock();
-		while (!bitmapContainerToRenderTo.empty())
+		// swap currentBitmapContainerQueue to keep lock as short as possible
+		currentBitmapContainerQueue = 1-currentBitmapContainerQueue;
+		bool wait = ACQUIRE_READ(renderToBitmapContainerWait);
+		if (!wait)
+			mutexRenderToBitmapContainer.unlock();
+		while (!bitmapContainerToRenderTo[1-currentBitmapContainerQueue].empty())
 		{
-			BitmapContainer* bmc = bitmapContainerToRenderTo.front().getPtr();
-			bitmapContainerToRenderTo.pop();
+			BitmapContainer* bmc = bitmapContainerToRenderTo[1-currentBitmapContainerQueue].front().getPtr();
+			bitmapContainerToRenderTo[1-currentBitmapContainerQueue].pop();
 			assert(bmc);
 			BitmapContainerRenderData* renderdata = bmc->swapRenderData();
 			// upload all needed bitmaps to gpu
@@ -394,8 +421,6 @@ bool RenderThread::doRender(ThreadProfile* profile,Chronometer* chronometer)
 				flipvertical=false; // avoid flipping resulting image vertically (as is done for normal rendering)
 				setViewPort(w,h,false);
 
-				// uint c1 = 0;
-				// uint64_t t1 = compat_msectiming();
 				while (!renderdata->rendercalls.empty())
 				{
 					RenderDisplayObjectToBitmapContainer& container = renderdata->rendercalls.front();
@@ -537,8 +562,6 @@ bool RenderThread::doRender(ThreadProfile* profile,Chronometer* chronometer)
 						nanoVGDeleteImage(nanoVGoriginalImage,engineData);
 					}
 				}
-				// uint64_t t2 = compat_msectiming();
-				// LOG(LOG_ERROR,"***rendertobitmap:"<<(t2-t1)<<" "<<c1);
 				// reset everything for normal rendering
 				baseFramebuffer=0;
 				baseRenderbuffer=0;
@@ -552,11 +575,13 @@ bool RenderThread::doRender(ThreadProfile* profile,Chronometer* chronometer)
 				engineData->exec_glDeleteRenderbuffers(1,&bmrenderbuffer);
 			}
 			// destroy temporary bitmaps used for rendering
+			renderdata->mutexRenderCallBitmaps.lock();
 			while (!renderdata->rendercallBitmaps.empty())
 			{
 				(*renderdata->rendercallBitmaps.begin())->resetRenderCall();
 				renderdata->rendercallBitmaps.pop_front();
 			}
+			renderdata->mutexRenderCallBitmaps.unlock();
 			if (renderdata->needswait)
 			{
 				// signal to waiting worker thread that rendering is complete
@@ -564,7 +589,8 @@ bool RenderThread::doRender(ThreadProfile* profile,Chronometer* chronometer)
 			}
 		}
 		RELEASE_WRITE(renderToBitmapContainerNeeded,false);
-		mutexRenderToBitmapContainer.unlock();
+		if (wait)
+			mutexRenderToBitmapContainer.unlock();
 	}
 	if(USUALLY_FALSE(m_sys->isOnError()))
 	{
@@ -1936,6 +1962,7 @@ void RenderThread::readPixelsToBimapContainer(_NR<BitmapContainer> bm)
 {
 	if(m_sys->isShuttingDown() || !EngineData::enablerendering)
 	{
+		Locker l(bm->getRenderData()->mutexRenderCallBitmaps);
 		while (!bm->getRenderData()->rendercallBitmaps.empty())
 		{
 			(*bm->getRenderData()->rendercallBitmaps.begin())->resetRenderCall();
@@ -1948,34 +1975,32 @@ void RenderThread::readPixelsToBimapContainer(_NR<BitmapContainer> bm)
 	bm->getRenderData()->readpixels=true;
 	bm->getRenderData()->needswait=true;
 	bm->incRef();
-	bitmapContainerToRenderTo.push(_MR(bm));
+	bitmapContainerToRenderTo[currentBitmapContainerQueue].push(_MR(bm));
 	RELEASE_WRITE(renderToBitmapContainerNeeded,true);
+	RELEASE_WRITE(renderToBitmapContainerWait,true);
 	event.signal();
 	mutexRenderToBitmapContainer.unlock();
 	bm->renderevent.wait(); // wait until render thread has completed reading pixels to BitmapContainer
+	RELEASE_WRITE(renderToBitmapContainerWait,false);
 	bm->setModifiedTexture(false);
 	bm->setModifiedData(false);
 }
 void RenderThread::addRenderCallBitmap(BitmapContainer* bm, Bitmap* tempBitmap)
 {
-	mutexRenderToBitmapContainer.lock();
+	Locker l(bm->getRenderData()->mutexRenderCallBitmaps);
 	if(m_sys->isShuttingDown() || !EngineData::enablerendering)
 	{
 		tempBitmap->decRef();
-		mutexRenderToBitmapContainer.unlock();
 		return;
 	}
 	bm->getRenderData()->rendercallBitmaps.push_back(tempBitmap);
-	mutexRenderToBitmapContainer.unlock();
 }
 void RenderThread::renderBitmap(BitmapContainer* bm, Bitmap* tempBitmap, bool wait)
 {
-	mutexRenderToBitmapContainer.lock();
 	if(m_sys->isShuttingDown() || !EngineData::enablerendering)
 	{
 		if (tempBitmap)
 			tempBitmap->decRef();
-		mutexRenderToBitmapContainer.unlock();
 		return;
 	}
 	if (bm->getRenderData()->rendercalls.empty() || bm->isEmpty() || bm->getWidth()==0 || bm->getHeight()==0)
@@ -1986,16 +2011,22 @@ void RenderThread::renderBitmap(BitmapContainer* bm, Bitmap* tempBitmap, bool wa
 	bm->getRenderData()->readpixels=false;
 	bm->getRenderData()->needswait=wait;
 	if (tempBitmap)
+	{
+		Locker l(bm->getRenderData()->mutexRenderCallBitmaps);
 		bm->getRenderData()->rendercallBitmaps.push_back(tempBitmap);
+	}
 
 	bm->incRef();
-	bitmapContainerToRenderTo.push(_MR(bm));
+	mutexRenderToBitmapContainer.lock();
+	bitmapContainerToRenderTo[currentBitmapContainerQueue].push(_MR(bm));
 	RELEASE_WRITE(renderToBitmapContainerNeeded,true);
 	if (wait)
 	{
+		RELEASE_WRITE(renderToBitmapContainerWait,true);
 		event.signal();
 		mutexRenderToBitmapContainer.unlock();
 		bm->renderevent.wait(); // wait until render thread has completed rendering to BitmapContainer
+		RELEASE_WRITE(renderToBitmapContainerWait,false);
 	}
 	else
 		mutexRenderToBitmapContainer.unlock();
