@@ -936,7 +936,6 @@ bool checkForLocalResult(preloadstate& state,memorystream& code,uint32_t opcode_
 				uint32_t num = code.peeku30FromPosition(pos);
 				state.setlocal_handled.insert(make_pair(pos,state.operandlist.size()));
 				state.operandlist.push_back(operands(OP_LOCAL,restype,num,0,0));
-				state.operandlist.back().setaslocalresult=true;
 
 				// set optimized opcode to corresponding opcode with local result
 				state.preloadedcode[preloadpos].opcode += opcode_jumpspace;
@@ -959,7 +958,6 @@ bool checkForLocalResult(preloadstate& state,memorystream& code,uint32_t opcode_
 			{
 				state.setlocal_handled.insert(make_pair(pos,state.operandlist.size()));
 				state.operandlist.push_back(operands(OP_LOCAL,restype,b-0xd4,0,0));
-				state.operandlist.back().setaslocalresult=true;
 
 				// set optimized opcode to corresponding opcode with local result
 				state.preloadedcode[preloadpos].opcode += opcode_jumpspace;
@@ -1198,16 +1196,32 @@ bool checkForLocalResult(preloadstate& state,memorystream& code,uint32_t opcode_
 		if (!setlocal)
 		{
 			uint32_t resultpos;
-			resultpos = state.mi->body->localresultcount++;
-			state.localtypes.push_back(restype);
-			state.defaultlocaltypes.push_back(nullptr);
-			state.defaultlocaltypescacheable.push_back(true);
+			if (state.localresultposfreelist.empty())
+			{
+				resultpos = state.mi->body->localresultcount++;
+				LOG_CALL("new resultpos:"<<(state.mi->body->getReturnValuePos()+resultpos+1));
+				assert (state.localtypes.size() == state.mi->body->getReturnValuePos()+resultpos);
+				state.localtypes.push_back(restype);
+				state.defaultlocaltypes.push_back(nullptr);
+				state.defaultlocaltypescacheable.push_back(true);
+			}
+			else
+			{
+				resultpos = state.localresultposfreelist.front();
+				uint32_t localpos = state.mi->body->getReturnValuePos()+resultpos;
+				LOG_CALL("reuse resultpos:"<<(localpos+1));
+				state.localresultposfreelist.pop_front();
+				state.localtypes[localpos] = restype;
+				state.defaultlocaltypes[localpos] = nullptr;
+				state.defaultlocaltypescacheable[localpos] = true;
+			}
 			// set optimized opcode to corresponding opcode with local result
 			state.preloadedcode[preloadpos].opcode += opcode_jumpspace;
 			state.preloadedcode[preloadpos].hasLocalResult=true;
 			state.preloadedcode[preloadlocalpos].pcode.local3.pos = state.mi->body->getReturnValuePos()+1+resultpos;
 			state.preloadedcode[preloadlocalpos].operator_setslot=opcode_setslot;
 			state.operandlist.push_back(operands(OP_LOCAL,restype,state.mi->body->getReturnValuePos()+1+resultpos,0,0));
+			state.operandlist.back().setaslocalresult=true;
 			state.lastlocalresultpos=UINT32_MAX;
 		}
 		state.duplocalresult=true;
@@ -1298,7 +1312,7 @@ bool setupInstructionOneArgument(preloadstate& state,int operator_start,int opco
 	if (hasoperands)
 	{
 		auto it = state.operandlist.end();
-		(--it)->removeArg(state);// remove arg1
+		(--it)->removeArg(state,!fromdup);// remove arg1
 		if (addchanged && (it->type == OP_LOCAL || it->type == OP_CACHED_SLOT))
 			setOperandModified(state,it->type,it->index);
 		it = state.operandlist.end();

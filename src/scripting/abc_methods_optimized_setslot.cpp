@@ -59,8 +59,8 @@ void lightspark::abc_setslot_local_local(call_context* context)
 	asAtom v1 = CONTEXT_GETLOCAL(context,context->exec_pos->local_pos1);
 	asAtom v2 = CONTEXT_GETLOCAL(context,context->exec_pos->local_pos2);
 	uint32_t t = context->exec_pos->arg3_uint;
-	LOG_CALL("setSlot_ll " << t << " "<< asAtomHandler::toDebugString(v2) << " "<< asAtomHandler::toDebugString(v1));
-	if (asAtomHandler::getObject(v1)->setSlot(context->worker,t,v2)==TTRUE)
+	LOG_CALL("setSlot_ll " << t << " "<< asAtomHandler::toDebugString(v2) << " "<< asAtomHandler::toDebugString(v1)<< " "<<context->exec_pos->local_pos2<<" "<<context->exec_pos->local_pos1);
+	if (asAtomHandler::getObjectNoCheck(v1)->setSlot(context->worker,t,v2)==TTRUE)
 		ASATOM_INCREF(v2);
 	++(context->exec_pos);
 }
@@ -96,7 +96,7 @@ void lightspark::abc_setslotNoCoerce_local_local(call_context* context)
 	asAtom v1 = CONTEXT_GETLOCAL(context,context->exec_pos->local_pos1);
 	asAtom v2 = CONTEXT_GETLOCAL(context,context->exec_pos->local_pos2);
 	uint32_t t = context->exec_pos->arg3_uint;
-	LOG_CALL("setSlotNoCoerce_ll " << t << " "<< asAtomHandler::toDebugString(v2) << " "<< asAtomHandler::toDebugString(v1));
+	LOG_CALL("setSlotNoCoerce_ll " << t << " "<< asAtomHandler::toDebugString(v2) << " on "<< asAtomHandler::toDebugString(v1)<<" "<<context->exec_pos->local_pos2<<"/"<<context->exec_pos->local_pos1);
 	asAtomHandler::getObjectNoCheck(v1)->setSlotNoCoerce(t,v2);
 	++(context->exec_pos);
 }

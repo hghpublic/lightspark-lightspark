@@ -2999,7 +2999,9 @@ ASFUNCTIONBODY_ATOM(StyleSheet,clear)
 ASFUNCTIONBODY_ATOM(StyleSheet,transform)
 {
 	//StyleSheet* th=asAtomHandler::as<StyleSheet>(obj);
-	LOG(LOG_NOT_IMPLEMENTED,"StyleSheet.transform does nothing");
+	LOG(LOG_NOT_IMPLEMENTED,"StyleSheet.transform does not fill any TextFormat fields");
+	TextFormat* tf = Class<TextFormat>::getInstanceSNoArgs(wrk);
+	ret = asAtomHandler::fromObject(tf);
 }
 
 void StaticText::sinit(Class_base* c)

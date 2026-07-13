@@ -67,6 +67,7 @@ struct preloadstate
 	std::vector<bool> canlocalinitialize;
 	std::vector<bool> islocalRead;
 	std::list<scope_entry> scopelist;
+	std::list<uint32_t> localresultposfreelist;
 	SyntheticFunction* function;
 	ASWorker* worker;
 	method_info* mi;
@@ -93,7 +94,7 @@ struct operands
 	ASObject* instance;
 	operands():type(OP_UNDEFINED),modified(false),setaslocalresult(false),objtype(nullptr),index(-1),codecount(0),preloadedcodepos(0),instance(nullptr) {}
 	operands(OPERANDTYPES _t, Class_base* _o,int32_t _i,uint32_t _c, uint32_t _p):type(_t),modified(false),setaslocalresult(false),objtype(_o),index(_i),codecount(_c),preloadedcodepos(_p),instance(nullptr) {}
-	void removeArg(preloadstate& state)
+	void removeArg(preloadstate& state, bool freelocalresult=true)
 	{
 		if (codecount)
 		{
@@ -102,6 +103,11 @@ struct operands
 			for (auto it = state.operandlist.begin(); it != state.operandlist.end(); it++)
 				if (it->preloadedcodepos+it->codecount > preloadedcodepos+codecount)
 					it->preloadedcodepos -=codecount;
+		}
+		if (freelocalresult && type == OP_LOCAL && setaslocalresult)
+		{
+			LOG_CALL("add localresultpos to freelist:"<<index<<"/"<<(state.mi->body->getReturnValuePos()+1));
+			state.localresultposfreelist.push_back(index-(state.mi->body->getReturnValuePos()+1));
 		}
 	}
 	bool fillCode(preloadstate& state,int pos, int codepos, bool switchopcode,int* opcode=nullptr, uint32_t* opcode_setslot=nullptr)

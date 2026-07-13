@@ -354,16 +354,13 @@ void preload_dup(preloadstate& state,std::vector<typestackentry>& typestack,memo
 			}
 			else if (handled)
 			{
-				op.removeArg(state);
+				op.removeArg(state,false);
 				state.operandlist.back().codecount=0;
 				state.preloadedcode.push_back(opcode_optimized);
 				state.refreshOldNewPosition(code);
 				state.preloadedcode.back().pcode.local_pos1 = op.index;
 				state.preloadedcode.back().cachedslot1 = op.type == OP_CACHED_SLOT;
 				state.preloadedcode.back().pcode.local_pos2 = num;
-				state.localtypes.push_back(restype);
-				state.defaultlocaltypes.push_back(restype);
-				state.defaultlocaltypescacheable.push_back(true);
 				int prevargindex= state.operandlist.back().index;
 				uint8_t b = code.peekbyteFromPosition(pos);
 				switch (b)

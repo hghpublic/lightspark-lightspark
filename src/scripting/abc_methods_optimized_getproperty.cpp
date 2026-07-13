@@ -409,23 +409,23 @@ void lightspark::abc_getPropertyStaticName_local_localresult(call_context* conte
 	preloadedcodedata* instrptr = context->exec_pos;
 	multiname* name=instrptr->cachedmultiname2;
 
+	asAtom obj = CONTEXT_GETLOCAL(context,instrptr->local_pos1);
 	if (name->name_type == multiname::NAME_INT
-		&& asAtomHandler::is<Array>(CONTEXT_GETLOCAL(context,instrptr->local_pos1))
+		&& asAtomHandler::is<Array>(obj)
 		&& name->name_i > 0
 		&& (uint32_t)name->name_i < asAtomHandler::as<Array>(CONTEXT_GETLOCAL(context,instrptr->local_pos1))->getCurrentSize())
 	{
-		LOG_CALL( "getProperty_slli " << name->name_i << ' ' << asAtomHandler::toDebugString(CONTEXT_GETLOCAL(context,instrptr->local_pos1)));
+		LOG_CALL( "getProperty_slli " << name->name_i << ' ' << asAtomHandler::toDebugString(CONTEXT_GETLOCAL(context,instrptr->local_pos1))<<" "<<instrptr->local_pos1<<"/"<<instrptr->local3.pos);
 		asAtom oldres = CONTEXT_GETLOCAL(context,instrptr->local3.pos);
 		asAtomHandler::as<Array>(CONTEXT_GETLOCAL(context,instrptr->local_pos1))->at_nocheck(CONTEXT_GETLOCAL(context,instrptr->local3.pos),name->name_i);
 		if (asAtomHandler::isUndefined(CONTEXT_GETLOCAL(context,instrptr->local3.pos))) // item not found, check prototype
-			asAtomHandler::as<Array>(CONTEXT_GETLOCAL(context,instrptr->local_pos1))->getVariableByInteger(CONTEXT_GETLOCAL(context,instrptr->local3.pos),name->name_i,GET_VARIABLE_OPTION::NO_INCREF,context->worker);
+			asAtomHandler::as<Array>(obj)->getVariableByInteger(CONTEXT_GETLOCAL(context,instrptr->local3.pos),name->name_i,GET_VARIABLE_OPTION::NO_INCREF,context->worker);
 		ASATOM_INCREF(CONTEXT_GETLOCAL(context,instrptr->local3.pos));
 		ASATOM_DECREF(oldres);
 	}
 	else
 	{
-		LOG_CALL( "getProperty_sll " << *name << ' ' << asAtomHandler::toDebugString(CONTEXT_GETLOCAL(context,instrptr->local_pos1)));
-		asAtom obj = CONTEXT_GETLOCAL(context,instrptr->local_pos1);
+		LOG_CALL( "getProperty_sll " << *name << ' ' << asAtomHandler::toDebugString(obj)<<" "<<instrptr->local_pos1<<"/"<<instrptr->local3.pos);
 		asAtom prop=asAtomHandler::invalidAtom;
 		bool canCache=false;
 		multiname* simplegetter = asAtomHandler::getVariableByMultiname(obj,prop,*name,context->worker,canCache,GET_VARIABLE_OPTION::NONE);
