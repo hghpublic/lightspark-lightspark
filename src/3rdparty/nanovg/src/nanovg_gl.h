@@ -384,21 +384,20 @@ static GLNVGtexture* glnvg__allocTexture(GLNVGcontext* gl)
 			gl->textures = textures;
 			gl->ctextures = ctextures;
 		}
-		tex = &gl->textures[gl->ntextures++];
+		i = gl->ntextures++;
+		tex = &gl->textures[i];
 	}
 
 	memset(tex, 0, sizeof(*tex));
-	tex->id = ++gl->textureId;
+	tex->id = i+1;
 
 	return tex;
 }
 
 static GLNVGtexture* glnvg__findTexture(GLNVGcontext* gl, int id)
 {
-	int i;
-	for (i = 0; i < gl->ntextures; i++)
-		if (gl->textures[i].id == id)
-			return &gl->textures[i];
+	if (id <= gl->ntextures)
+		return &gl->textures[id-1];
 	return NULL;
 }
 
