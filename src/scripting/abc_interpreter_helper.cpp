@@ -49,6 +49,7 @@ preloadstate::preloadstate(SyntheticFunction* _f, ASWorker* _w):
 	,duplocalresult(false)
 	,atexceptiontarget(false)
 	,lastoperandsSwapped(false)
+	,needsscopestack(false)
 {
 
 }

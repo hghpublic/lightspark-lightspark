@@ -1321,7 +1321,6 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 			case 0x5f://finddef
 			case 0x60://getlex
 			case 0x61://setproperty
-			case 0x65://getscopeobject
 			case 0x66://getproperty
 			case 0x68://initproperty
 			case 0x6a://deleteproperty
@@ -1331,6 +1330,11 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 			case 0x6f://setglobalSlot
 			case 0x86://astype
 			case 0xb2://istype
+				codejumps.readu30();
+				constantsstack.clear();
+				break;
+			case 0x65://getscopeobject
+				state.needsscopestack=true;
 				codejumps.readu30();
 				constantsstack.clear();
 				break;
@@ -1655,6 +1659,10 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 				// deprecated  according to https://konghack.com/content/19-avm2instructions
 				// use convert_u instead
 				mi->body->code[codejumps.tellg()-1]=0x74; //convert_u
+				constantsstack.clear();
+				break;
+			case 0x1d://popscope
+				state.needsscopestack=true;
 				constantsstack.clear();
 				break;
 			default:
@@ -2578,8 +2586,17 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 				removeInitializeLocalToConstant(state,opcode-0xd0);
 				if (p==1 && opcode == 0xd0) //getlocal_0
 				{
-					if (code.peekbyte() == 0x30) // pushscope
+					uint32_t pos = 1;
+					if (!state.needsscopestack
+						&& code.peekbyteFromPosition(pos) == 0x2a //dup
+						&& code.peekbyteFromPosition(pos+1) == 0x30) // pushscope
 					{
+						// for some reason crossbridge pushes "this" twice on scopestack, can be skipped
+						pos+=2;
+					}
+					if (code.peekbyteFromPosition(pos) == 0x30) // pushscope
+					{
+						code.seekg(pos);
 						// function begins with getlocal_0 and pushscope, can be skipped
 						state.refreshOldNewPosition(code);
 						code.readbyte();
