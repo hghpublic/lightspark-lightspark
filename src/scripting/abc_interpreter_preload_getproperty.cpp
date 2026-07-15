@@ -83,8 +83,14 @@ void preload_getproperty(preloadstate& state, std::vector<typestackentry>& types
 						{
 							state.operandlist.back().removeArg(state);
 							state.operandlist.pop_back();
-							asAtom a = v->getVar();
-							addCachedConstant(state,state.mi, a,code);
+							asAtom c = v->getVar();
+							if(v->isFunctionVar() && v->getFunctionVar()->isMethod())
+							{
+								asAtom closure = asAtomHandler::getClosureAtom(c,asAtomHandler::invalidAtom);
+								if (!asAtomHandler::isValid(closure))
+									asAtomHandler::setFunction(c,v->getFunctionVar(),*a,state.worker);
+							}
+							addCachedConstant(state,state.mi, c,code);
 							addname = false;
 							removetypestack(typestack,runtimeargs+1);
 							typestack.push_back(typestackentry(v->getClassVar(state.function->getSystemState()),isborrowed|| v->isClassVar()));
