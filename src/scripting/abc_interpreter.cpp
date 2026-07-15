@@ -2731,7 +2731,14 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 					// skip unreachable code
 					for (int32_t i = 0; i < nextreachable; i++)
 						code.readbyte();
-					clearOperands(state,true,&lastlocalresulttype);
+					if (code.peekbyteFromPosition(p+j) == 0x32)//hasnext2
+					{
+						// common case for .. in .. loop, no need to clear local types
+						state.inForInLoop=true;
+						clearOperands(state,false,&lastlocalresulttype);
+					}
+					else
+						clearOperands(state,true,&lastlocalresulttype);
 				}
 				else
 				{
@@ -3999,18 +4006,33 @@ void ABCVm::preloadFunction(SyntheticFunction* function, ASWorker* wrk)
 				setupInstructionTwoArguments(state,ABC_OP_OPTIMZED_NEXTNAME,opcode,code,false,false,true,code.tellg());
 				removetypestack(typestack,2);
 				typestack.push_back(typestackentry(nullptr,false));
+				state.inForInLoop=false;
 				break;
 			case 0x23://nextvalue
 			{
 				Class_base* resulttype=nullptr;
 #ifdef ENABLE_OPTIMIZATION
 				ASObject* obj = typestack.at(typestack.size()-2).obj;
-				if (obj && obj->is<Vector>())
-					resulttype = obj->as<Vector>()->getType();
+				if (obj)
+				{
+					if(obj->is<Vector>())
+						resulttype = obj->as<Vector>()->getType();
+					else
+					{
+						auto tc = dynamic_cast<TemplatedClass<Vector>*>(obj);
+						if (tc && !tc->getTypes().empty())
+						{
+							Class_base* c = dynamic_cast<Class_base*>(obj->as<TemplatedClass<Vector>>()->getTypes()[0]);
+							if (c)
+								resulttype = c;
+						}
+					}
+				}
 #endif
 				setupInstructionTwoArguments(state,ABC_OP_OPTIMZED_NEXTVALUE,opcode,code,false,false,true,code.tellg(),resulttype);
 				removetypestack(typestack,2);
 				typestack.push_back(typestackentry(resulttype,false));
+				state.inForInLoop=false;
 				break;
 			}
 			case 0x77://convert_o

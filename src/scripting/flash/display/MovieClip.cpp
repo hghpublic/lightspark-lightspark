@@ -274,12 +274,14 @@ ASFUNCTIONBODY_ATOM(MovieClip,stop)
 {
 	MovieClip* th=asAtomHandler::as<MovieClip>(obj);
 	th->setStopped();
+	ret = asAtomHandler::undefinedAtom;
 }
 
 ASFUNCTIONBODY_ATOM(MovieClip,play)
 {
 	MovieClip* th=asAtomHandler::as<MovieClip>(obj);
 	th->setPlaying();
+	ret = asAtomHandler::undefinedAtom;
 }
 void MovieClip::setPlaying()
 {

@@ -167,7 +167,7 @@ void preload_getproperty(preloadstate& state, std::vector<typestackentry>& types
 								resulttype = v->isResolved && dynamic_cast<const Class_base*>(v->type) ? (Class_base*)v->type : nullptr;
 								if (!state.operandlist.back().objtype->is<Class_inherit>() && resulttype==nullptr)
 									LOG(LOG_NOT_IMPLEMENTED,"missing result type for builtin method4:"<<*name<<" "<<state.operandlist.back().objtype->toDebugString()<<" in function "<<getSys()->getStringFromUniqueId(state.function->functionname));
-								if (!setupInstructionOneArgument(state,ABC_OP_OPTIMZED_CALLFUNCTION_NOARGS,opcode,code,true, false,resulttype,p,true,false,false,true,ABC_OP_OPTIMZED_CALLFUNCTION_NOARGS_SETSLOT))
+								if (!setupInstructionOneArgument(state,asAtomHandler::is<Function>(v->getter) ? ABC_OP_OPTIMZED_CALLBUILTINFUNCTION_NOARGS : ABC_OP_OPTIMZED_CALLFUNCTION_NOARGS,opcode,code,true, false,resulttype,p,true,false,false,true,ABC_OP_OPTIMZED_CALLFUNCTION_NOARGS_SETSLOT))
 									*lastlocalresulttype = resulttype;
 								state.preloadedcode.at(state.preloadedcode.size()-1).pcode.cacheobj2 = asAtomHandler::getObject(v->getter);
 								addname = false;

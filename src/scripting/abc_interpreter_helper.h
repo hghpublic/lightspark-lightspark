@@ -77,6 +77,7 @@ struct preloadstate
 	bool atexceptiontarget;
 	bool lastoperandsSwapped;
 	bool needsscopestack;
+	bool inForInLoop;
 	preloadstate(SyntheticFunction* _f, ASWorker* _w);
 	void refreshOldNewPosition(memorystream& code, int codepos=-1);
 	void checkClearOperands(uint32_t p,Class_base** lastlocalresulttype);

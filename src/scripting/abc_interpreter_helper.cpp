@@ -50,6 +50,7 @@ preloadstate::preloadstate(SyntheticFunction* _f, ASWorker* _w):
 	,atexceptiontarget(false)
 	,lastoperandsSwapped(false)
 	,needsscopestack(false)
+	,inForInLoop(false)
 {
 
 }
@@ -67,7 +68,7 @@ void preloadstate::refreshOldNewPosition(memorystream& code, int codepos)
 void preloadstate::checkClearOperands(uint32_t p, Class_base** lastlocalresulttype)
 {
 	if (!atexceptiontarget && jumptargets.find(p) != jumptargets.end())
-		clearOperands(*this,true,lastlocalresulttype);
+		clearOperands(*this,!inForInLoop,lastlocalresulttype);
 }
 
 void preloadstate::removeOneJumpTarget(int32_t targetpos)
