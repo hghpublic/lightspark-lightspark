@@ -102,6 +102,18 @@ void preload_setproperty(preloadstate& state, std::vector<typestackentry>& types
 							v = it->objtype->findVariableByMultiname(*name,nullptr,nullptr,&isBorrowed,false,state.worker);
 							if (v && (v->kind != DECLARED_TRAIT || isBorrowed))
 								v=nullptr;
+							if (v && v->slotid && it->type != OP_CACHED_CONSTANT)
+							{
+								// v is slot in class, so we set the class as the object to set the property in
+								uint32_t value = state.mi->context->addCachedConstantAtom(asAtomHandler::fromObject(it->objtype));
+								it->type = OP_CACHED_CONSTANT;
+								it->index = value;
+								it->codecount = 1;
+								it->setaslocalresult = false;
+								state.preloadedcode.at(it->preloadedcodepos).opcode=ABC_OP_OPTIMZED_PUSHCACHEDCONSTANT;
+								state.preloadedcode.at(it->preloadedcodepos).pcode.func=nullptr;
+								state.preloadedcode.at(it->preloadedcodepos).pcode.arg3_uint=value;
+							}
 						}
 						if (!asAtomHandler::isPrimitive(otmp) && v && v->slotid)
 						{
