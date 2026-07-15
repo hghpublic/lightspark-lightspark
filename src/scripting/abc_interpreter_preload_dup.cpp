@@ -391,8 +391,65 @@ void preload_dup(preloadstate& state,std::vector<typestackentry>& typestack,memo
 			}
 			else
 			{
+				// dup can be skipped if _all_ of the following conditions are met:
+				// - previous opcode returns local result
+				// - dup is followed by setlocal
+				// - setlocal is followed by getproperty with static multiname
+				// - no jumptargets at any of the positions
+				int argindex= INT32_MIN;
+				pos = p;
+				if (state.operandlist.back().setaslocalresult
+					&& state.jumptargets.find(pos) == state.jumptargets.end())
+				{
+					uint8_t b = code.peekbyteFromPosition(pos);
+					switch (b)
+					{
+						case 0xd4: //setlocal_0
+						case 0xd5: //setlocal_1
+						case 0xd6: //setlocal_2
+						case 0xd7: //setlocal_3
+							++pos;
+							argindex= b-0xd4;
+							break;
+						case 0x63://setlocal
+							argindex= code.peeku30FromPosition(pos+1) ;
+							pos = code.skipu30FromPosition(pos+1);
+							break;
+						default:
+							break;
+					}
+				}
+				if (argindex != INT32_MIN
+					&& (state.jumptargets.find(pos) == state.jumptargets.end())
+					)
+				{
+					b = code.peekbyteFromPosition(pos);
+					switch (b)
+					{
+						case 0x66://getproperty
+						{
+							uint32_t t = code.peeku30FromPosition(pos+1);
+							if (state.mi->context->constant_pool.multinames[t].runtimeargs)
+								break;
+							// dup on a local result followed by setlocal and getproperty,
+							// can be skipped and getproperty will use the setlocal position as arg
+							op.removeArg(state);
+							state.operandlist.pop_back();
+							state.preloadedcode.back().pcode.local3.pos = argindex;
+							op = operands(OP_LOCAL,state.localtypes[argindex],argindex,1,state.preloadedcode.size()-1);
+							addOperand(state,op,code);
+							typestack.push_back(typestackentry(state.localtypes[argindex],false));
+							code.seekg(pos);
+							return;
+						}
+						default:
+							// LOG(LOG_ERROR,"dup with setlocal:"<<p<<" "<<hex<<(int)b);
+							// state.worker->dumpStacktrace();
+							// TODO optimize other setlocal/opcode combinations
+							break;
+					}
+				}
 				// this ensures that the "old" value is stored in a localresult and can be used later, as the duplicated value may be changed by an increment etc.
-				//setupInstructionOneArgument(state,ABC_OP_OPTIMZED_DUP,opcode,code,false,true,restype,code.tellg(),opcode_optimized==0,false,true,true,ABC_OP_OPTIMZED_DUP_SETSLOT);
 				setupInstructionOneArgument(state,ABC_OP_OPTIMZED_DUP,opcode,code,false,true,restype,code.tellg(),true,false,true,true,ABC_OP_OPTIMZED_DUP_SETSLOT);
 			}
 			if (!dupoperand)
